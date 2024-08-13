@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+
 interface PredictItContract {
   id: string;
   name: string;
@@ -12,18 +13,18 @@ interface PredictItContract {
 const PREDICTIT_API = 'https://www.predictit.org/api/marketdata/markets';
 
 export const fetchContractPrice = async (externalId: string): Promise<number | null> => {
-  try {
-    const response = await axios.get(`${PREDICTIT_API}/${externalId}`);
-    const contract = response.data.contracts.find((c: any) => c.id === externalId);
-    if (contract) {
-      return contract.lastTradePrice;
+    try {
+      const response = await axios.get(`${PREDICTIT_API}/${externalId}`);
+      const contract = response.data.contracts.find((c: any) => c.id === externalId);
+      if (contract) {
+        return contract.lastTradePrice;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching price from PredictIt:', error);
+      return null;
     }
-    return null;
-  } catch (error) {
-    console.error('Error fetching price from PredictIt:', error);
-    return null;
-  }
-};
+  };
 
 export async function discoverPredictItContracts(): Promise<PredictItContract[]> {
   try {

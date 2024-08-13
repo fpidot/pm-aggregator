@@ -2,6 +2,7 @@ import Contract, { IContract } from '../models/Contract';
 import Subscriber, { ISubscriber } from '../models/Subscriber';
 import { sendSMS } from './smsService';
 import { getAdminSettings, AlertSettings } from './adminService';
+import AdminSettings from '../models/AdminSettings';
 
 export const sendDailyUpdate = async (): Promise<void> => {
   const subscribers = await Subscriber.find({ 'alertPreferences.dailyUpdates': true });
@@ -24,34 +25,40 @@ export const sendDailyUpdate = async (): Promise<void> => {
 };
 
 export const checkBigMoves = async (): Promise<void> => {
-  const settings = await getAdminSettings();
-  const displayedContracts = await Contract.find({ isDisplayed: true });
-  const subscribers = await Subscriber.find({ 'alertPreferences.bigMoves': true });
-
-  for (const contract of displayedContracts) {
-    const threshold = settings.bigMoveThresholds.get(contract.category) || 0;
-    const timeWindowMs = settings.bigMoveTimeWindow * 60 * 60 * 1000; // Convert hours to milliseconds
-    const referencePrice = contract.lastAlertPrice || contract.priceHistory.find(ph => ph.timestamp.getTime() <= Date.now() - timeWindowMs)?.price;
-
-    if (!referencePrice) continue;
-
-    const priceDiff = contract.currentPrice - referencePrice;
-
-    if (Math.abs(priceDiff) >= threshold && Date.now() - (contract.lastAlertTime?.getTime() || 0) > timeWindowMs) {
-      const message = createBigMoveMessage(contract, priceDiff);
-
-      for (const subscriber of subscribers) {
-        if (subscriber.categories.includes(contract.category)) {
-          await sendSMS(subscriber.phoneNumber, message);
-        }
-      }
-
-      contract.lastAlertPrice = contract.currentPrice;
-      contract.lastAlertTime = new Date();
-      await contract.save();
+    const settings = await AdminSettings.findOne();
+    if (!settings) {
+      console.error('Admin settings not found');
+      return;
     }
-  }
-};
+  
+    const displayedContracts = await Contract.find({ isDisplayed: true });
+    const subscribers = await Subscriber.find({ 'alertPreferences.bigMoves': true });
+  
+    for (const contract of displayedContracts) {
+      const threshold = settings.bigMoveThresholds.get(contract.category) || 0;
+      const timeWindowMs = settings.bigMoveTimeWindow * 60 * 60 * 1000; // Convert hours to milliseconds
+      
+      if (!contract.lastAlertPrice || !contract.lastAlertTime) {
+        continue; // Skip if we don't have previous alert data
+      }
+  
+      const priceDiff = contract.currentPrice - contract.lastAlertPrice;
+  
+      if (Math.abs(priceDiff) >= threshold && Date.now() - contract.lastAlertTime.getTime() > timeWindowMs) {
+        const message = createBigMoveMessage(contract, priceDiff);
+  
+        for (const subscriber of subscribers) {
+          if (subscriber.categories.includes(contract.category)) {
+            await sendSMS(subscriber.phoneNumber, message);
+          }
+        }
+  
+        contract.lastAlertPrice = contract.currentPrice;
+        contract.lastAlertTime = new Date();
+        await contract.save();
+      }
+    }
+  };
 
 const createBigMoveMessage = (contract: IContract, priceDiff: number): string => {
   const oneHourAgoPrice = contract.priceHistory.find(ph => ph.timestamp.getTime() <= Date.now() - 60 * 60 * 1000)?.price;

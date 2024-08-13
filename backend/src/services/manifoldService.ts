@@ -37,3 +37,16 @@ export async function updateManifoldPrices(contractIds: string[]): Promise<Manif
     return [];
   }
 }
+
+export const fetchContractPrice = async (externalId: string): Promise<number | null> => {
+    try {
+      const response = await axios.get(`${MANIFOLD_API_URL}/market/${externalId}`);
+      if (response.data && response.data.probability) {
+        return response.data.probability;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching price from Manifold:', error);
+      return null;
+    }
+  };

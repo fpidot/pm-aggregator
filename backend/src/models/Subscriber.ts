@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ISubscriber extends Document {
   phoneNumber: string;
-  categories: Array<"Elections" | "Economy" | "Geopolitics">;
+  categories: string[];
   alertPreferences: {
     dailyUpdates: boolean;
     bigMoves: boolean;
@@ -12,7 +12,7 @@ export interface ISubscriber extends Document {
 
 const SubscriberSchema: Schema = new Schema({
   phoneNumber: { type: String, required: true, unique: true },
-  categories: [{ type: String, enum: ["Elections", "Economy", "Geopolitics"] }],
+  categories: [{ type: String }],
   alertPreferences: {
     dailyUpdates: { type: Boolean, default: true },
     bigMoves: { type: Boolean, default: true }

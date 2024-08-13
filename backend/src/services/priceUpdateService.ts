@@ -1,4 +1,4 @@
-import Contract from '../models/Contract';
+import Contract, { IContract } from '../models/Contract';
 import { getAdminSettings } from './adminService';
 import * as predictItService from './predictItService';
 import * as kalshiService from './kalshiService';
@@ -11,21 +11,21 @@ export const updatePrices = async (): Promise<void> => {
   await Promise.all(updatePromises);
 };
 
-const updateContractPrice = async (contract: any): Promise<void> => {
+const updateContractPrice = async (contract: IContract): Promise<void> => {
   let newPrice: number | null = null;
 
   switch (contract.market) {
     case 'PredictIt':
-      newPrice = await predictItService.getContractPrice(contract.externalId);
+      newPrice = await predictItService.fetchContractPrice(contract.externalId);
       break;
     case 'Kalshi':
-      newPrice = await kalshiService.getMarketPrice(contract.externalId);
+      newPrice = await kalshiService.fetchContractPrice(contract.externalId);
       break;
     case 'Polymarket':
-      newPrice = await polymarketService.getMarketPrice(contract.externalId);
+      newPrice = await polymarketService.fetchContractPrice(contract.externalId);
       break;
     case 'Manifold':
-      newPrice = await manifoldService.getMarketPrice(contract.externalId);
+      newPrice = await manifoldService.fetchContractPrice(contract.externalId);
       break;
   }
 
@@ -35,7 +35,7 @@ const updateContractPrice = async (contract: any): Promise<void> => {
     
     // Keep only the last 24 hours of price history
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    contract.priceHistory = contract.priceHistory.filter((ph: any) => ph.timestamp > twentyFourHoursAgo);
+    contract.priceHistory = contract.priceHistory.filter(ph => ph.timestamp > twentyFourHoursAgo);
 
     contract.lastUpdated = new Date();
     await contract.save();

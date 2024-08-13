@@ -69,3 +69,16 @@ export async function updatePolymarketPrices(contractIds: string[]): Promise<Pol
     return [];
   }
 }
+
+export const fetchContractPrice = async (externalId: string): Promise<number | null> => {
+    try {
+      const response = await axios.get(`${POLYMARKET_API_URL}/${externalId}`);
+      if (response.data && response.data.outcomeOnePrice) {
+        return parseFloat(response.data.outcomeOnePrice);
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching price from Polymarket:', error);
+      return null;
+    }
+  };

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 
 interface KalshiContract {
   ticker: string;
@@ -9,6 +9,18 @@ interface KalshiContract {
 }
 
 const KALSHI_API_URL = 'https://trading-api.kalshi.com/trade-api/v2';
+
+let axiosInstance: AxiosInstance;
+
+const initializeAxiosInstance = () => {
+  axiosInstance = axios.create({
+    baseURL: KALSHI_API_URL,
+    headers: {
+      'Authorization': `Bearer ${process.env.KALSHI_API_KEY}`,
+      'Content-Type': 'application/json'
+    }
+  });
+};
 
 let authToken: string | null = null;
 
@@ -73,6 +85,20 @@ export async function updateKalshiPrices(tickers: string[]): Promise<KalshiContr
 }
 
 export const getMarketPrice = async (externalId: string): Promise<number | null> => {
+    if (!axiosInstance) initializeAxiosInstance();
+    try {
+      const response = await axiosInstance.get(`/markets/${externalId}`);
+      if (response.data && response.data.yes_bid) {
+        return response.data.yes_bid / 100; // Kalshi prices are in cents
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching price from Kalshi:', error);
+      return null;
+    }
+  };
+
+  export const fetchContractPrice = async (externalId: string): Promise<number | null> => {
     if (!axiosInstance) initializeAxiosInstance();
     try {
       const response = await axiosInstance.get(`/markets/${externalId}`);
