@@ -1,57 +1,74 @@
-import Contract, { IContract } from '../models/Contract';
-import { getAdminSettings } from './adminService';
+import logger from '../utils/logger';
+import { IContract, ContractModel } from '../models/Contract';
+import { IAdminSettings, AdminSettingsModel } from '../models/AdminSettings';
 import * as predictItService from './predictItService';
 import * as kalshiService from './kalshiService';
 import * as polymarketService from './polymarketService';
 import * as manifoldService from './manifoldService';
+import * as alertService from './alertService';
 
-export const updatePrices = async (): Promise<void> => {
-  const contracts = await Contract.find({ isFollowed: true });
-  const updatePromises = contracts.map(updateContractPrice);
-  await Promise.all(updatePromises);
-};
+export async function updatePrices(): Promise<void> {
+  logger.info('Starting price update process');
+  try {
+    const contracts = await ContractModel.find({});
+    const adminSettings = await AdminSettingsModel.findOne();
 
-const updateContractPrice = async (contract: IContract): Promise<void> => {
-  let newPrice: number | null = null;
-
-  switch (contract.market) {
-    case 'PredictIt':
-      newPrice = await predictItService.fetchContractPrice(contract.externalId);
-      break;
-    case 'Kalshi':
-      newPrice = await kalshiService.fetchContractPrice(contract.externalId);
-      break;
-    case 'Polymarket':
-      newPrice = await polymarketService.fetchContractPrice(contract.externalId);
-      break;
-    case 'Manifold':
-      newPrice = await manifoldService.fetchContractPrice(contract.externalId);
-      break;
-  }
-
-  if (newPrice !== null) {
-    contract.currentPrice = newPrice;
-    contract.priceHistory.push({ price: newPrice, timestamp: new Date() });
-    
-    // Keep only the last 24 hours of price history
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    contract.priceHistory = contract.priceHistory.filter(ph => ph.timestamp > twentyFourHoursAgo);
-
-    contract.lastUpdated = new Date();
-    await contract.save();
-  }
-};
-
-export const scheduleUpdates = async (): Promise<void> => {
-  const settings = await getAdminSettings();
-  const updateIntervalMs = settings.priceUpdateInterval * 60 * 1000; // Convert minutes to milliseconds
-
-  setInterval(async () => {
-    try {
-      await updatePrices();
-      console.log('Price update completed successfully');
-    } catch (error) {
-      console.error('Error updating prices:', error);
+    if (!adminSettings) {
+      logger.error('Admin settings not found');
+      return;
     }
-  }, updateIntervalMs);
-};
+
+    for (const contract of contracts) {
+      await updateContractPrice(contract, adminSettings);
+    }
+
+    logger.info('Price update process completed');
+  } catch (error) {
+    logger.error('Error in updatePrices:', error);
+  }
+}
+
+async function updateContractPrice(contract: IContract, adminSettings: IAdminSettings): Promise<void> {
+  try {
+    const newPrice = await getNewPrice(contract);
+
+    if (newPrice !== null) {
+      const priceChange = calculatePriceChange(contract, newPrice);
+      contract.priceHistory.push({ price: newPrice, timestamp: new Date() });
+      contract.currentPrice = newPrice;
+
+      if (Math.abs(priceChange) >= adminSettings.bigMoveThreshold) {
+        logger.info(`Big move detected for contract ${contract._id}: ${priceChange}`);
+        await alertService.sendBigMoveAlerts(contract, priceChange);
+      }
+
+      await contract.save();
+      logger.info(`Updated price for contract ${contract._id}: ${newPrice}`);
+    } else {
+      logger.warn(`Failed to get price for contract ${contract._id}`);
+    }
+  } catch (error) {
+    logger.error(`Error updating price for contract ${contract._id}:`, error);
+  }
+}
+
+async function getNewPrice(contract: IContract): Promise<number | null> {
+  switch (contract.market.platform) {
+    case 'PredictIt':
+      return await predictItService.getPrice(contract.market.id);
+    case 'Kalshi':
+      return await kalshiService.getPrice(contract.market.id);
+    case 'Polymarket':
+      return await polymarketService.getPrice(contract.market.id);
+    case 'Manifold':
+      return await manifoldService.getPrice(contract.market.id);
+    default:
+      logger.warn(`Unknown platform: ${contract.market.platform}`);
+      return null;
+  }
+}
+
+function calculatePriceChange(contract: IContract, newPrice: number): number {
+  const oldPrice = contract.priceHistory[contract.priceHistory.length - 1]?.price;
+  return oldPrice ? newPrice - oldPrice : 0;
+}
