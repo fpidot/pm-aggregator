@@ -33,20 +33,20 @@ function getContractPrice(contract: GenericContract): number {
 }
 
 export async function discoverAllContracts() {
-  try {
-    const [predictItContracts, kalshiContracts, polymarketContracts, manifoldContracts] = await Promise.all([
-      discoverPredictItContracts(),
-      discoverKalshiContracts(),
-      discoverPolymarketContracts(),
-      discoverManifoldContracts()
-    ]);
-
-    const allContracts: GenericContract[] = [
-      ...predictItContracts.map(c => ({ ...c, market: 'PredictIt' })),
-      ...kalshiContracts.map(c => ({ ...c, market: 'Kalshi' })),
-      ...polymarketContracts.map(c => ({ ...c, market: 'Polymarket' })),
-      ...manifoldContracts.map(c => ({ ...c, market: 'Manifold' }))
-    ];
+    try {
+      const [predictItContracts, kalshiContracts, polymarketContracts, manifoldContracts] = await Promise.all([
+        discoverPredictItContracts(),
+        discoverKalshiContracts(),
+        discoverPolymarketContracts(),
+        discoverManifoldContracts()
+      ]);
+  
+      const allContracts: GenericContract[] = [
+        ...(predictItContracts || []).map(c => ({ ...c, market: 'PredictIt' })),
+        ...(kalshiContracts || []).map(c => ({ ...c, market: 'Kalshi' })),
+        ...(polymarketContracts || []).map(c => ({ ...c, market: 'Polymarket' })),
+        ...(manifoldContracts || []).map(c => ({ ...c, market: 'Manifold' }))
+      ];
 
     for (const contract of allContracts) {
       await Contract.findOneAndUpdate(
@@ -93,11 +93,11 @@ export async function updateFollowedContractPrices() {
     ]);
 
     const allUpdatedContracts: GenericContract[] = [
-      ...updatedPredictIt.map(c => ({ ...c, market: 'PredictIt' })),
-      ...updatedKalshi.map(c => ({ ...c, market: 'Kalshi' })),
-      ...updatedPolymarket.map(c => ({ ...c, market: 'Polymarket' })),
-      ...updatedManifold.map(c => ({ ...c, market: 'Manifold' }))
-    ];
+        ...(updatedPredictIt || []).map(c => ({ ...c, market: 'PredictIt' })),
+        ...(updatedKalshi || []).map(c => ({ ...c, market: 'Kalshi' })),
+        ...(updatedPolymarket || []).map(c => ({ ...c, market: 'Polymarket' })),
+        ...(updatedManifold || []).map(c => ({ ...c, market: 'Manifold' }))
+      ];
 
     for (const contract of allUpdatedContracts) {
       await Contract.findOneAndUpdate(
