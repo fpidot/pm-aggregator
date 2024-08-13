@@ -14,13 +14,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/twilio": "^3.19.3",
     "axios": "^1.7.3",
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
     "ethers": "^6.13.2",
     "express": "^4.17.1",
     "mongoose": "^6.13.0",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "twilio": "^5.2.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.12",
