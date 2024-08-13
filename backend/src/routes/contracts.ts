@@ -1,6 +1,7 @@
 import express from 'express';
 import Contract from '../models/Contract';
 import { validateContract } from '../middleware/validateContract';
+import { discoverAllContracts } from '../services/marketDiscoveryService';
 
 const router = express.Router();
 
@@ -79,5 +80,14 @@ router.get('/', async (req, res) => {
     }
   });
   
+  // Manually trigger contract discovery
+router.post('/discover', async (req, res) => {
+    try {
+      await discoverAllContracts();
+      res.json({ message: 'Contract discovery process initiated' });
+    } catch (error) {
+      handleError(error, res, 'Error initiating contract discovery');
+    }
+  });
 
 export default router;

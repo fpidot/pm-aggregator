@@ -3,11 +3,28 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import contractRoutes from './routes/contracts';
+import cron from 'node-cron';
+import { discoverAllContracts, updateFollowedContractPrices } from './services/marketDiscoveryService';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
+
+// Schedule contract discovery to run every 6 hours
+cron.schedule('0 */6 * * *', () => {
+    console.log('Running scheduled contract discovery');
+    discoverAllContracts();
+  });
+
+// Schedule price updates for followed contracts every minute
+cron.schedule('* * * * *', () => {
+    console.log('Updating prices for followed contracts');
+    updateFollowedContractPrices();
+  });
+  
+  // Run initial discovery on server start
+  discoverAllContracts();
 
 mongoose.connect(process.env.MONGODB_URI as string)
   .then(() => console.log('Connected to MongoDB'))

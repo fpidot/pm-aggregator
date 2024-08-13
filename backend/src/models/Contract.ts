@@ -7,6 +7,8 @@ const ContractSchema = new mongoose.Schema({
   currentPrice: { type: Number, required: true },
   lastUpdated: { type: Date, default: Date.now },
   isDisplayed: { type: Boolean, default: false },
+  isFollowed: { type: Boolean, default: false },
+  externalId: { type: String, required: true }
 });
 
 export default mongoose.model('Contract', ContractSchema);
