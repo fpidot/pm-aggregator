@@ -1,6 +1,8 @@
 import logger from '../utils/logger';
-import { IContract, ContractModel } from '../models/Contract';
-import { IAdminSettings, AdminSettingsModel } from '../models/AdminSettings';
+import { IContract } from '../models/Contract';
+import { IAdminSettings } from '../models/AdminSettings';
+import ContractModel from '../models/Contract';
+import AdminSettingsModel from '../models/AdminSettings';
 import * as predictItService from './predictItService';
 import * as kalshiService from './kalshiService';
 import * as polymarketService from './polymarketService';
@@ -29,41 +31,43 @@ export async function updatePrices(): Promise<void> {
 }
 
 async function updateContractPrice(contract: IContract, adminSettings: IAdminSettings): Promise<void> {
-  try {
-    const newPrice = await getNewPrice(contract);
-
-    if (newPrice !== null) {
-      const priceChange = calculatePriceChange(contract, newPrice);
-      contract.priceHistory.push({ price: newPrice, timestamp: new Date() });
-      contract.currentPrice = newPrice;
-
-      if (Math.abs(priceChange) >= adminSettings.bigMoveThreshold) {
-        logger.info(`Big move detected for contract ${contract._id}: ${priceChange}`);
-        await alertService.sendBigMoveAlerts(contract, priceChange);
+    try {
+      const newPrice = await getNewPrice(contract);
+  
+      if (newPrice !== null) {
+        const priceChange = calculatePriceChange(contract, newPrice);
+        contract.priceHistory.push({ price: newPrice, timestamp: new Date() });
+        contract.currentPrice = newPrice;
+  
+        const threshold = adminSettings.bigMoveThresholds.get(contract.category);
+        if (threshold && Math.abs(priceChange) >= threshold) {
+          logger.info(`Big move detected for contract ${contract._id}: ${priceChange}`);
+          contract.lastAlertPrice = newPrice;
+          contract.lastAlertTime = new Date();
+        }
+  
+        await contract.save();
+        logger.info(`Updated price for contract ${contract._id}: ${newPrice}`);
+      } else {
+        logger.warn(`Failed to get price for contract ${contract._id}`);
       }
-
-      await contract.save();
-      logger.info(`Updated price for contract ${contract._id}: ${newPrice}`);
-    } else {
-      logger.warn(`Failed to get price for contract ${contract._id}`);
+    } catch (error) {
+      logger.error(`Error updating price for contract ${contract._id}:`, error);
     }
-  } catch (error) {
-    logger.error(`Error updating price for contract ${contract._id}:`, error);
   }
-}
 
 async function getNewPrice(contract: IContract): Promise<number | null> {
-  switch (contract.market.platform) {
+  switch (contract.market) {
     case 'PredictIt':
-      return await predictItService.getPrice(contract.market.id);
+      return await predictItService.fetchContractPrice(contract.market);
     case 'Kalshi':
-      return await kalshiService.getPrice(contract.market.id);
+      return await kalshiService.fetchContractPrice(contract.market);
     case 'Polymarket':
-      return await polymarketService.getPrice(contract.market.id);
+      return await polymarketService.fetchContractPrice(contract.market);
     case 'Manifold':
-      return await manifoldService.getPrice(contract.market.id);
+      return await manifoldService.fetchContractPrice(contract.market);
     default:
-      logger.warn(`Unknown platform: ${contract.market.platform}`);
+      logger.warn(`Unknown market: ${contract.market}`);
       return null;
   }
 }
