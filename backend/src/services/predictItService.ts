@@ -9,6 +9,22 @@ interface PredictItContract {
   markets: string;
 }
 
+const PREDICTIT_API = 'https://www.predictit.org/api/marketdata/markets';
+
+export const fetchContractPrice = async (externalId: string): Promise<number | null> => {
+  try {
+    const response = await axios.get(`${PREDICTIT_API}/${externalId}`);
+    const contract = response.data.contracts.find((c: any) => c.id === externalId);
+    if (contract) {
+      return contract.lastTradePrice;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching price from PredictIt:', error);
+    return null;
+  }
+};
+
 export async function discoverPredictItContracts(): Promise<PredictItContract[]> {
   try {
     const response = await axios.get('https://www.predictit.org/api/marketdata/all/');

@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IContract extends Document {
   title: string;
   market: string;
-  category: "Elections" | "Economy" | "Geopolitics";
+  category: string;
   currentPrice: number;
   lastUpdated: Date;
   isDisplayed: boolean;
@@ -17,7 +17,7 @@ export interface IContract extends Document {
 const ContractSchema: Schema = new Schema({
   title: { type: String, required: true },
   market: { type: String, required: true },
-  category: { type: String, enum: ["Elections", "Economy", "Geopolitics"], required: true },
+  category: { type: String, required: true },
   currentPrice: { type: Number, required: true },
   lastUpdated: { type: Date, default: Date.now },
   isDisplayed: { type: Boolean, default: false },

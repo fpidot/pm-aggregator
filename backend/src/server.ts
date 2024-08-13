@@ -5,6 +5,9 @@ import mongoose from 'mongoose';
 import contractRoutes from './routes/contracts';
 import cron from 'node-cron';
 import { discoverAllContracts, updateFollowedContractPrices } from './services/marketDiscoveryService';
+import subscriberRoutes from './routes/subscriberRoutes';
+import adminRoutes from './routes/adminRoutes';
+import { scheduleUpdates } from './services/priceUpdateService';
 
 dotenv.config();
 
@@ -34,6 +37,8 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/contracts', contractRoutes);
+app.use('/api/subscribers', subscriberRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.send('Prediction Market Aggregator API');
@@ -42,3 +47,7 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
+
+scheduleUpdates().catch(error => {
+    console.error('Failed to start price update scheduler:', error);
+  });

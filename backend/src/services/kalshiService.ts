@@ -71,3 +71,17 @@ export async function updateKalshiPrices(tickers: string[]): Promise<KalshiContr
     return [];
   }
 }
+
+export const getMarketPrice = async (externalId: string): Promise<number | null> => {
+    if (!axiosInstance) initializeAxiosInstance();
+    try {
+      const response = await axiosInstance.get(`/markets/${externalId}`);
+      if (response.data && response.data.yes_bid) {
+        return response.data.yes_bid / 100; // Kalshi prices are in cents
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching price from Kalshi:', error);
+      return null;
+    }
+  };
