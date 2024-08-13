@@ -10,7 +10,7 @@ const client = twilio(
   process.env.TWILIO_AUTH_TOKEN
 );
 
-async function sendSMS(to: string, body: string): Promise<void> {
+export async function sendSMS(to: string, body: string): Promise<void> {
   try {
     const result = await client.messages.create({
       body,
