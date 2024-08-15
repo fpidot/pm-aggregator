@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import mongoose from 'mongoose';
 import logger from './utils/logger';
 import dotenv from 'dotenv';
@@ -16,6 +17,11 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(express.json());
+
+app.use(cors({
+  origin: 'http://localhost:3000', // Allow requests from your frontend
+  credentials: true,
+}));
 
 // Routes
 app.use('/api/contracts', contractRoutes);

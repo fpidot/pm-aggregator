@@ -1,5 +1,6 @@
 import express from 'express';
 import Contract from '../models/Contract';
+import AdminSettings from '../models/AdminSettings'; // Make sure to import this
 import { validateContract } from '../middleware/validateContract';
 import { discoverAllContracts } from '../services/marketDiscoveryService';
 
@@ -12,13 +13,15 @@ const handleError = (error: unknown, res: express.Response, message: string) => 
 
 // Get all contracts
 router.get('/', async (req, res) => {
-    try {
-      const contracts = await Contract.find();
-      res.json(contracts);
-    } catch (error: unknown) {
-      handleError(error, res, 'Error fetching contracts');
-    }
-  });
+  try {
+    const contracts = await Contract.find({ isDisplayed: true });
+    const adminSettings = await AdminSettings.findOne();
+    const categories = adminSettings ? adminSettings.categories : [];
+    res.json({ contracts, categories });
+  } catch (error: unknown) {
+    handleError(error, res, 'Error fetching contracts and categories');
+  }
+});
   
   // Get a single contract by ID
   router.get('/:id', async (req, res) => {

@@ -1,5 +1,24 @@
 import axios from 'axios';
 import { ethers } from 'ethers';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+
+const POLYMARKET_API_URL = 'https://clob.polymarket.com';
+const POLYMARKET_GRAPH_URL = 'https://subgraph.poly.market/subgraphs/name/polymarket/matic-markets';
+const POLYGON_PRIVATE_KEY = process.env.POLYGON_PRIVATE_KEY;
+
+let wallet: ethers.Wallet | null = null;
+
+try {
+  if (!POLYGON_PRIVATE_KEY) {
+    throw new Error('POLYGON_PRIVATE_KEY is not set in the environment variables');
+  }
+  wallet = new ethers.Wallet(POLYGON_PRIVATE_KEY);
+} catch (error) {
+  console.error('Error initializing Polymarket wallet:', error);
+}
 
 interface PolymarketContract {
   id: string;
@@ -7,8 +26,6 @@ interface PolymarketContract {
   outcomePrices: number[];
 }
 
-const POLYMARKET_API_URL = 'https://clob.polymarket.com';
-const POLYMARKET_GRAPH_URL = 'https://subgraph.poly.market/subgraphs/name/polymarket/matic-markets';
 
 // Initialize provider and signer
 const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
@@ -71,14 +88,23 @@ export async function updatePolymarketPrices(contractIds: string[]): Promise<Pol
 }
 
 export const fetchContractPrice = async (externalId: string): Promise<number | null> => {
-    try {
-      const response = await axios.get(`${POLYMARKET_API_URL}/${externalId}`);
-      if (response.data && response.data.outcomeOnePrice) {
-        return parseFloat(response.data.outcomeOnePrice);
-      }
-      return null;
-    } catch (error) {
-      console.error('Error fetching price from Polymarket:', error);
-      return null;
+  try {
+    const response = await axios.get(`${POLYMARKET_API_URL}/markets/${externalId}`);
+    if (response.data && response.data.outcomesPrices && response.data.outcomesPrices.length > 0) {
+      return parseFloat(response.data.outcomesPrices[0]);
     }
-  };
+    console.warn(`No price data found for contract ${externalId}`);
+    return null;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        console.error(`API error fetching price from Polymarket for ${externalId}:`, error.response.status, error.response.data);
+      } else if (error.request) {
+        console.error(`Network error fetching price from Polymarket for ${externalId}:`, error.message);
+      }
+    } else {
+      console.error(`Unexpected error fetching price from Polymarket for ${externalId}:`, error);
+    }
+    return null;
+  }
+};
