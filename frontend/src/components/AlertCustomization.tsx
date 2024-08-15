@@ -7,6 +7,7 @@ import {
 import { updateUserPreferences } from '../slices/userSlice';
 import { RootState } from '../store';
 import { fetchContracts } from '../slices/contractSlice';
+import { UserPreferences } from '../types'; // Adjust the path as necessary
 
 function AlertCustomization() {
   const dispatch = useDispatch();
@@ -18,7 +19,7 @@ function AlertCustomization() {
     dailyUpdates: false,
     bigMoves: false
   });
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(preferences.phoneNumber || '');
 
   useEffect(() => {
     if (categories.length === 0) {
@@ -50,7 +51,7 @@ function AlertCustomization() {
       categories: selectedCategories,
       alertTypes,
       phoneNumber
-    }) as any);
+    } as UserPreferences) as any);
   };
 
   if (contractsLoading) return <CircularProgress />;
