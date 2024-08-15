@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { FormGroup, FormControlLabel, Checkbox, Button, Typography, CircularProgress } from '@mui/material';
+import { 
+  FormGroup, FormControlLabel, Checkbox, Button, Typography, 
+  CircularProgress, TextField, Box 
+} from '@mui/material';
 import { updateUserPreferences } from '../slices/userSlice';
 import { RootState } from '../store';
 import { fetchContracts } from '../slices/contractSlice';
@@ -11,7 +14,11 @@ function AlertCustomization() {
   const { categories, loading: contractsLoading } = useSelector((state: RootState) => state.contracts);
 
   const [selectedCategories, setSelectedCategories] = useState(preferences.categories);
-  const [alertTypes, setAlertTypes] = useState(preferences.alertTypes);
+  const [alertTypes, setAlertTypes] = useState({
+    dailyUpdates: false,
+    bigMoves: false
+  });
+  const [phoneNumber, setPhoneNumber] = useState('');
 
   useEffect(() => {
     if (categories.length === 0) {
@@ -33,16 +40,24 @@ function AlertCustomization() {
     setAlertTypes({ ...alertTypes, [name]: checked });
   };
 
+  const handlePhoneNumberChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setPhoneNumber(event.target.value);
+  };
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    dispatch(updateUserPreferences({ categories: selectedCategories, alertTypes }) as any);
+    dispatch(updateUserPreferences({
+      categories: selectedCategories,
+      alertTypes,
+      phoneNumber
+    }) as any);
   };
 
   if (contractsLoading) return <CircularProgress />;
   if (!categories || categories.length === 0) return <Typography>No categories available.</Typography>;
 
   return (
-    <form onSubmit={handleSubmit}>
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
       <Typography variant="h6">Select Categories</Typography>
       <FormGroup>
         {categories.map(category => (
@@ -60,8 +75,49 @@ function AlertCustomization() {
         ))}
       </FormGroup>
 
-      {/* ... rest of the form ... */}
-    </form>
+      <Typography variant="h6" sx={{ mt: 2 }}>Alert Types</Typography>
+      <FormGroup>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={alertTypes.dailyUpdates}
+              onChange={handleAlertTypeChange}
+              name="dailyUpdates"
+            />
+          }
+          label="Daily Updates"
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={alertTypes.bigMoves}
+              onChange={handleAlertTypeChange}
+              name="bigMoves"
+            />
+          }
+          label="Big Moves"
+        />
+      </FormGroup>
+
+      <TextField
+        fullWidth
+        label="Phone Number"
+        variant="outlined"
+        value={phoneNumber}
+        onChange={handlePhoneNumberChange}
+        sx={{ mt: 2 }}
+      />
+
+      <Button 
+        type="submit" 
+        variant="contained" 
+        color="primary" 
+        disabled={userLoading} 
+        sx={{ mt: 2 }}
+      >
+        {userLoading ? 'Updating...' : 'Save Preferences'}
+      </Button>
+    </Box>
   );
 }
 

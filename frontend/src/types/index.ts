@@ -12,4 +12,5 @@ export interface UserPreferences {
       dailyUpdates: boolean;
       bigMoves: boolean;
     };
+    phoneNumber: string;
   }
