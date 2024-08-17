@@ -7,10 +7,10 @@ export interface Contract {
   }
   
 export interface UserPreferences {
-    categories: string[];
-    alertTypes: {
-      dailyUpdates: boolean;
-      bigMoves: boolean;
-    };
-    phoneNumber: string;
-  }
+  categories: string[];
+  alertPreferences: {
+    dailyUpdates: boolean;
+    bigMoves: boolean;
+  };
+  phoneNumber: string;
+}

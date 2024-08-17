@@ -30,7 +30,18 @@ export const updateUserPreferences = createAsyncThunk(
 
 const userSlice = createSlice({
   name: 'user',
-  initialState,
+  initialState: {
+    preferences: {
+      categories: [],
+      alertTypes: {
+        dailyUpdates: false,
+        bigMoves: false
+      },
+      phoneNumber: ''
+    },
+    loading: false,
+    error: null,
+  },
   reducers: {},
   extraReducers: (builder) => {
     builder

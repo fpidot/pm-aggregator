@@ -33,4 +33,3 @@ export async function updateUserPreferencesAPI(preferences: UserPreferences): Pr
   return response.json();
 }
 
-// You can add more API functions here as needed
