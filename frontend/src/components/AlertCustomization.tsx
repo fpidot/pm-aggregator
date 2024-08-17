@@ -2,21 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   FormGroup, FormControlLabel, Checkbox, Button, Typography, 
-  CircularProgress, TextField, Box 
+  CircularProgress, TextField, Box, Snackbar 
 } from '@mui/material';
 import { updateUserPreferences } from '../slices/userSlice';
-import { RootState } from '../store';
+import { AppDispatch, RootState } from '../store';
 import { fetchContracts } from '../slices/contractSlice';
 import { UserPreferences } from '../types';
 
 function AlertCustomization() {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const { preferences, loading: userLoading } = useSelector((state: RootState) => state.user);
   const { categories, loading: contractsLoading } = useSelector((state: RootState) => state.contracts);
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>(preferences.categories);
   const [alertPreferences, setAlertPreferences] = useState(preferences.alertPreferences);
   const [phoneNumber, setPhoneNumber] = useState(preferences.phoneNumber);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     if (categories.length === 0) {
@@ -44,12 +46,45 @@ function AlertCustomization() {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    setError(null);
+
+    // Validate at least one category is selected
+    if (selectedCategories.length === 0) {
+      setError('Please select at least one category');
+      return;
+    }
+
+    // Validate at least one alert type is selected
+    if (!alertPreferences.dailyUpdates && !alertPreferences.bigMoves) {
+      setError('Please select at least one alert type');
+      return;
+    }
+
+    // Phone number validation (10 digits, ignoring dashes)
+    const phoneRegex = /^\d{3}[-]?\d{3}[-]?\d{4}$/;
+    if (!phoneRegex.test(phoneNumber.replace(/\D/g, ''))) {
+      setError('Invalid phone number. Please enter a 10-digit number.');
+      return;
+    }
+
     const updatedPreferences: UserPreferences = {
       categories: selectedCategories,
       alertPreferences,
-      phoneNumber
+      phoneNumber: phoneNumber.replace(/\D/g, '') // Store only digits
     };
-    dispatch(updateUserPreferences(updatedPreferences) as any);
+    
+    console.log('Sending preferences:', updatedPreferences);
+    
+    dispatch(updateUserPreferences(updatedPreferences))
+      .unwrap()
+      .then((result: { subscriber: UserPreferences }) => {
+        console.log('Server response:', result);
+        setSuccess(true);
+      })
+      .catch((err: Error) => {
+        console.error('Error updating preferences:', err);
+        setError(err.message);
+      });
   };
 
   if (contractsLoading) return <CircularProgress />;
@@ -116,6 +151,19 @@ function AlertCustomization() {
       >
         {userLoading ? 'Updating...' : 'Save Preferences'}
       </Button>
+
+      <Snackbar
+        open={error !== null}
+        autoHideDuration={6000}
+        onClose={() => setError(null)}
+        message={error}
+      />
+      <Snackbar
+        open={success}
+        autoHideDuration={6000}
+        onClose={() => setSuccess(false)}
+        message="Preferences saved successfully"
+      />
     </Box>
   );
 }

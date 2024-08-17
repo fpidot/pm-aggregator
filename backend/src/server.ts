@@ -45,6 +45,18 @@ mongoose.connect(process.env.MONGODB_URI!)
     logger.error('Error connecting to MongoDB:', error);
   });
 
+  mongoose.connection.on('error', err => {
+    logger.error('MongoDB connection error:', err);
+  });
+  
+  mongoose.connection.on('disconnected', () => {
+    logger.warn('MongoDB disconnected');
+  });
+  
+  mongoose.connection.on('reconnected', () => {
+    logger.info('MongoDB reconnected');
+  });
+  
 // Global error handler
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error('Unhandled error:', err);
