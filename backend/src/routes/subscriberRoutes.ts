@@ -5,21 +5,21 @@ const router = express.Router();
 
 router.post('/preferences', async (req, res) => {
   try {
-    const { phoneNumber, categories, alertTypes } = req.body;
+    const { phoneNumber, categories, alertPreferences } = req.body;
 
     let subscriber: ISubscriber | null = await Subscriber.findOne({ phoneNumber });
 
     if (subscriber) {
       // Update existing subscriber
       subscriber.categories = categories;
-      subscriber.alertPreferences = alertTypes;
+      subscriber.alertPreferences = alertPreferences;
       await subscriber.save();
     } else {
       // Create new subscriber
       subscriber = new Subscriber({
         phoneNumber,
         categories,
-        alertPreferences: alertTypes
+        alertPreferences
       });
       await subscriber.save();
     }
@@ -27,7 +27,7 @@ router.post('/preferences', async (req, res) => {
     res.status(200).json({ message: 'Preferences saved successfully', subscriber });
   } catch (error) {
     console.error('Error saving subscriber preferences:', error);
-    res.status(500).json({ message: 'Error saving preferences', error: error.message });
+    res.status(500).json({ message: 'Error saving preferences', error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
