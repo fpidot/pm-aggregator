@@ -8,6 +8,8 @@ export interface ISubscriber extends Document {
     bigMoves: boolean;
   };
   mutedUntil?: Date;
+  confirmationCode?: string;
+  isVerified: boolean;
 }
 
 const SubscriberSchema: Schema = new Schema({
@@ -17,7 +19,9 @@ const SubscriberSchema: Schema = new Schema({
     dailyUpdates: { type: Boolean, default: false },
     bigMoves: { type: Boolean, default: false }
   },
-  mutedUntil: { type: Date }
+  mutedUntil: { type: Date },
+  confirmationCode: { type: String },
+  isVerified: { type: Boolean, default: false }
 });
 
 export default mongoose.model<ISubscriber>('Subscriber', SubscriberSchema);

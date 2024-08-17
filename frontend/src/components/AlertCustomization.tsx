@@ -8,10 +8,11 @@ import { updateUserPreferences } from '../slices/userSlice';
 import { AppDispatch, RootState } from '../store';
 import { fetchContracts } from '../slices/contractSlice';
 import { UserPreferences } from '../types';
+import SubscriberRegistration from './SubscriberRegistration';
 
 function AlertCustomization() {
   const dispatch = useDispatch<AppDispatch>();
-  const { preferences, loading: userLoading } = useSelector((state: RootState) => state.user);
+  const { preferences, loading, isVerified } = useSelector((state: RootState) => state.user);
   const { categories, loading: contractsLoading } = useSelector((state: RootState) => state.contracts);
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>(preferences.categories);
@@ -19,12 +20,16 @@ function AlertCustomization() {
   const [phoneNumber, setPhoneNumber] = useState(preferences.phoneNumber);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-
+  
   useEffect(() => {
     if (categories.length === 0) {
       dispatch(fetchContracts() as any);
     }
   }, [dispatch, categories]);
+
+  if (!isVerified) {
+    return <SubscriberRegistration />;
+  }
 
   const handleCategoryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = event.target;
@@ -48,19 +53,17 @@ function AlertCustomization() {
     event.preventDefault();
     setError(null);
 
-    // Validate at least one category is selected
+    // Validation logic (keep existing validation)
     if (selectedCategories.length === 0) {
       setError('Please select at least one category');
       return;
     }
 
-    // Validate at least one alert type is selected
     if (!alertPreferences.dailyUpdates && !alertPreferences.bigMoves) {
       setError('Please select at least one alert type');
       return;
     }
 
-    // Phone number validation (10 digits, ignoring dashes)
     const phoneRegex = /^\d{3}[-]?\d{3}[-]?\d{4}$/;
     if (!phoneRegex.test(phoneNumber.replace(/\D/g, ''))) {
       setError('Invalid phone number. Please enter a 10-digit number.');
@@ -70,7 +73,7 @@ function AlertCustomization() {
     const updatedPreferences: UserPreferences = {
       categories: selectedCategories,
       alertPreferences,
-      phoneNumber: phoneNumber.replace(/\D/g, '') // Store only digits
+      phoneNumber: phoneNumber.replace(/\D/g, '')
     };
     
     console.log('Sending preferences:', updatedPreferences);
@@ -92,64 +95,17 @@ function AlertCustomization() {
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-      <Typography variant="h6">Select Categories</Typography>
-      <FormGroup>
-        {categories.map(category => (
-          <FormControlLabel
-            key={category}
-            control={
-              <Checkbox
-                checked={selectedCategories.includes(category)}
-                onChange={handleCategoryChange}
-                name={category}
-              />
-            }
-            label={category}
-          />
-        ))}
-      </FormGroup>
-
-      <Typography variant="h6" sx={{ mt: 2 }}>Alert Preferences</Typography>
-      <FormGroup>
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={alertPreferences.dailyUpdates}
-              onChange={handleAlertPreferenceChange}
-              name="dailyUpdates"
-            />
-          }
-          label="Daily Updates"
-        />
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={alertPreferences.bigMoves}
-              onChange={handleAlertPreferenceChange}
-              name="bigMoves"
-            />
-          }
-          label="Big Moves"
-        />
-      </FormGroup>
-
-      <TextField
-        fullWidth
-        label="Phone Number"
-        variant="outlined"
-        value={phoneNumber}
-        onChange={handlePhoneNumberChange}
-        sx={{ mt: 2 }}
-      />
+      {/* Keep existing JSX for categories, alert preferences, and phone number */}
+      {/* ... */}
 
       <Button 
         type="submit" 
         variant="contained" 
         color="primary" 
-        disabled={userLoading} 
+        disabled={loading} 
         sx={{ mt: 2 }}
       >
-        {userLoading ? 'Updating...' : 'Save Preferences'}
+        {loading ? 'Updating...' : 'Save Preferences'}
       </Button>
 
       <Snackbar

@@ -1,6 +1,8 @@
 import express from 'express';
-import Subscriber, { ISubscriber } from '../models/Subscriber';
+import Subscriber from '../models/Subscriber';
 import logger from '../utils/logger';
+import { sendSMS } from '../services/smsService';
+import { generateConfirmationCode } from '../utils/codeGenerator';
 
 const router = express.Router();
 
@@ -59,6 +61,69 @@ router.post('/preferences', async (req, res) => {
   } catch (error) {
     logger.error('Error saving subscriber preferences:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// New route for registration
+router.post('/register', async (req, res) => {
+  try {
+    const { phoneNumber, categories, alertPreferences } = req.body;
+
+    let subscriber = await Subscriber.findOne({ phoneNumber });
+
+    if (subscriber) {
+      return res.status(400).json({ message: 'Subscriber already exists' });
+    }
+
+    const confirmationCode = generateConfirmationCode();
+
+    subscriber = new Subscriber({
+      phoneNumber,
+      categories,
+      alertPreferences,
+      confirmationCode,
+      isVerified: false
+    });
+
+    await subscriber.save();
+
+    try {
+      await sendSMS(phoneNumber, `Your confirmation code is: ${confirmationCode}`);
+      res.status(200).json({ message: 'Confirmation code sent. Please verify your number.' });
+    } catch (smsError) {
+      console.error('Error sending SMS:', smsError);
+      // Remove the unverified subscriber if SMS fails
+      await Subscriber.findByIdAndDelete(subscriber._id);
+      res.status(500).json({ message: 'Failed to send confirmation code. Please try again.' });
+    }
+  } catch (error) {
+    console.error('Error registering subscriber:', error);
+    res.status(500).json({ message: 'Error registering subscriber' });
+  }
+});
+
+// New route for verification
+router.post('/verify', async (req, res) => {
+  try {
+    const { phoneNumber, confirmationCode } = req.body;
+    const subscriber = await Subscriber.findOne({ phoneNumber });
+
+    if (!subscriber) {
+      return res.status(404).json({ message: 'Subscriber not found' });
+    }
+
+    if (subscriber.confirmationCode !== confirmationCode) {
+      return res.status(400).json({ message: 'Invalid confirmation code' });
+    }
+
+    subscriber.isVerified = true;
+    subscriber.confirmationCode = undefined;
+    await subscriber.save();
+
+    res.status(200).json({ message: 'Phone number verified successfully' });
+  } catch (error) {
+    console.error('Error verifying subscriber:', error);
+    res.status(500).json({ message: 'Error verifying subscriber' });
   }
 });
 

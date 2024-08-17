@@ -8,6 +8,7 @@ import { updatePrices } from './services/priceUpdateService';
 import contractRoutes from './routes/contracts';
 import subscriberRoutes from './routes/subscriberRoutes';
 import adminRoutes from './routes/adminRoutes';
+import alertRoutes from './routes/alertRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -17,6 +18,8 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(express.json());
+
+app.use('/api/alerts', alertRoutes);
 
 app.use(cors({
   origin: 'http://localhost:3000', // Allow requests from your frontend
@@ -56,7 +59,7 @@ mongoose.connect(process.env.MONGODB_URI!)
   mongoose.connection.on('reconnected', () => {
     logger.info('MongoDB reconnected');
   });
-  
+
 // Global error handler
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error('Unhandled error:', err);

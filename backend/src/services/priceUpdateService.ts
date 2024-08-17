@@ -8,6 +8,7 @@ import * as kalshiService from './kalshiService';
 import * as polymarketService from './polymarketService';
 import * as manifoldService from './manifoldService';
 import * as alertService from './alertService';
+import { checkBigMoves } from './alertService';
 
 export async function updatePrices(): Promise<void> {
   logger.info('Starting price update process');
@@ -27,6 +28,11 @@ export async function updatePrices(): Promise<void> {
     logger.info('Price update process completed');
   } catch (error) {
     logger.error('Error in updatePrices:', error);
+  }
+  try {
+    await checkBigMoves();
+  } catch (error) {
+    console.error('Error checking for big moves:', error);
   }
 }
 

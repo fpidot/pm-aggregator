@@ -12,6 +12,16 @@ router.get('/settings', async (req, res) => {
   }
 });
 
+router.post('/verify-password', (req, res) => {
+  const { password } = req.body;
+  
+  if (password === process.env.ADMIN_PASSWORD) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ success: false });
+  }
+});
+
 router.put('/settings', async (req, res) => {
   try {
     await adminService.updateAdminSettings(req.body);
