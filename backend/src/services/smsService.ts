@@ -10,27 +10,33 @@ const client = twilio(
   process.env.TWILIO_AUTH_TOKEN
 );
 
+
+
+export function formatPhoneNumber(phoneNumber: string): string {
+  // Remove all non-digit characters
+  const digitsOnly = phoneNumber.replace(/\D/g, '');
+  
+  // Ensure the number is exactly 10 digits
+  if (digitsOnly.length !== 10) {
+    throw new Error('Invalid phone number format. Must be 10 digits.');
+  }
+  
+  // Add the +1 country code for US numbers
+  return `+1${digitsOnly}`;
+}
+
 export async function sendSMS(to: string, body: string): Promise<void> {
   try {
-    // Format the phone number to E.164 format
-    const formattedNumber = formatPhoneNumber(to);
     const result = await client.messages.create({
       body,
       from: process.env.TWILIO_PHONE_NUMBER,
-      to: formattedNumber
+      to
     });
     console.log(`SMS sent successfully. SID: ${result.sid}`);
   } catch (error) {
     console.error('Error sending SMS:', error);
     throw error;
   }
-}
-
-function formatPhoneNumber(phoneNumber: string): string {
-  // Remove all non-digit characters
-  const digitsOnly = phoneNumber.replace(/\D/g, '');
-  // Ensure the number starts with '+1' (assuming US numbers)
-  return `+1${digitsOnly.slice(-10)}`;
 }
 
 export async function sendDailyUpdate(subscriber: ISubscriber, contracts: Array<{ title: string; currentPrice: number; change24h: number; category: Category }>): Promise<void> {

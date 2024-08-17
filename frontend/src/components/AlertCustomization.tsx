@@ -27,9 +27,11 @@ function AlertCustomization() {
     }
   }, [dispatch, categories]);
 
-  if (!isVerified) {
-    return <SubscriberRegistration />;
-  }
+  console.log('AlertCustomization rendering');
+  console.log('Categories:', categories);
+  console.log('Selected Categories:', selectedCategories);
+  console.log('Alert Preferences:', alertPreferences);
+  console.log('Is Verified:', isVerified);
 
   const handleCategoryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = event.target;
@@ -94,19 +96,72 @@ function AlertCustomization() {
   if (!categories || categories.length === 0) return <Typography>No categories available.</Typography>;
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-      {/* Keep existing JSX for categories, alert preferences, and phone number */}
-      {/* ... */}
+    <Box sx={{ mt: 3 }}>
+      {!isVerified ? (
+        <SubscriberRegistration />
+      ) : (
+        <Box component="form" onSubmit={handleSubmit}>
+          <Typography variant="h6">Select Categories</Typography>
+          <FormGroup>
+            {categories.map(category => (
+              <FormControlLabel
+                key={category}
+                control={
+                  <Checkbox
+                    checked={selectedCategories.includes(category)}
+                    onChange={handleCategoryChange}
+                    name={category}
+                  />
+                }
+                label={category}
+              />
+            ))}
+          </FormGroup>
 
-      <Button 
-        type="submit" 
-        variant="contained" 
-        color="primary" 
-        disabled={loading} 
-        sx={{ mt: 2 }}
-      >
-        {loading ? 'Updating...' : 'Save Preferences'}
-      </Button>
+          <Typography variant="h6" sx={{ mt: 2 }}>Alert Preferences</Typography>
+          <FormGroup>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={alertPreferences.dailyUpdates}
+                  onChange={handleAlertPreferenceChange}
+                  name="dailyUpdates"
+                />
+              }
+              label="Daily Updates"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={alertPreferences.bigMoves}
+                  onChange={handleAlertPreferenceChange}
+                  name="bigMoves"
+                />
+              }
+              label="Big Moves"
+            />
+          </FormGroup>
+
+          <TextField
+            fullWidth
+            label="Phone Number"
+            variant="outlined"
+            value={phoneNumber}
+            onChange={handlePhoneNumberChange}
+            sx={{ mt: 2 }}
+          />
+
+          <Button 
+            type="submit" 
+            variant="contained" 
+            color="primary" 
+            disabled={loading} 
+            sx={{ mt: 2 }}
+          >
+            {loading ? 'Updating...' : 'Save Preferences'}
+          </Button>
+        </Box>
+      )}
 
       <Snackbar
         open={error !== null}

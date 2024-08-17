@@ -1,7 +1,7 @@
 import express from 'express';
 import Subscriber from '../models/Subscriber';
 import logger from '../utils/logger';
-import { sendSMS } from '../services/smsService';
+import { sendSMS, formatPhoneNumber } from '../services/smsService';
 import { generateConfirmationCode } from '../utils/codeGenerator';
 
 const router = express.Router();
@@ -64,36 +64,38 @@ router.post('/preferences', async (req, res) => {
   }
 });
 
-// New route for registration
+// Route for registration
 router.post('/register', async (req, res) => {
   try {
     const { phoneNumber, categories, alertPreferences } = req.body;
+    const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
 
-    let subscriber = await Subscriber.findOne({ phoneNumber });
-
-    if (subscriber) {
-      return res.status(400).json({ message: 'Subscriber already exists' });
-    }
-
+    let subscriber = await Subscriber.findOne({ phoneNumber: formattedPhoneNumber });
+    console.log('Subscriber saved:', subscriber);
     const confirmationCode = generateConfirmationCode();
 
-    subscriber = new Subscriber({
-      phoneNumber,
-      categories,
-      alertPreferences,
-      confirmationCode,
-      isVerified: false
-    });
+    if (subscriber) {
+      // If subscriber exists, just update the confirmation code
+      subscriber.confirmationCode = confirmationCode;
+      subscriber.isVerified = false;
+    } else {
+      // If new subscriber, create a new document
+      subscriber = new Subscriber({
+        phoneNumber: formattedPhoneNumber,
+        categories,
+        alertPreferences,
+        confirmationCode,
+        isVerified: false
+      });
+    }
 
     await subscriber.save();
 
     try {
-      await sendSMS(phoneNumber, `Your confirmation code is: ${confirmationCode}`);
+      await sendSMS(formattedPhoneNumber, `Your confirmation code is: ${confirmationCode}`);
       res.status(200).json({ message: 'Confirmation code sent. Please verify your number.' });
     } catch (smsError) {
       console.error('Error sending SMS:', smsError);
-      // Remove the unverified subscriber if SMS fails
-      await Subscriber.findByIdAndDelete(subscriber._id);
       res.status(500).json({ message: 'Failed to send confirmation code. Please try again.' });
     }
   } catch (error) {
@@ -106,19 +108,28 @@ router.post('/register', async (req, res) => {
 router.post('/verify', async (req, res) => {
   try {
     const { phoneNumber, confirmationCode } = req.body;
-    const subscriber = await Subscriber.findOne({ phoneNumber });
+    const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
 
+    const subscriber = await Subscriber.findOne({ phoneNumber: formattedPhoneNumber });
+
+    
     if (!subscriber) {
       return res.status(404).json({ message: 'Subscriber not found' });
     }
 
     if (subscriber.confirmationCode !== confirmationCode) {
+      console.log('Stored code:', subscriber.confirmationCode, 'Received code:', confirmationCode);
       return res.status(400).json({ message: 'Invalid confirmation code' });
     }
 
     subscriber.isVerified = true;
     subscriber.confirmationCode = undefined;
     await subscriber.save();
+    console.log('Verification attempt:', { 
+      phoneNumber: formattedPhoneNumber, 
+      storedCode: subscriber.confirmationCode, 
+      receivedCode: confirmationCode 
+    });
 
     res.status(200).json({ message: 'Phone number verified successfully' });
   } catch (error) {

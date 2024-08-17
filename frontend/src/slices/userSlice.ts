@@ -88,7 +88,14 @@ const initialState: UserState = {
 const userSlice = createSlice({
   name: 'user',
   initialState,
-  reducers: {},
+  reducers: {
+    clearError: (state) => {
+      state.error = null;
+    },
+    setIsVerified: (state, action: PayloadAction<boolean>) => {
+      state.isVerified = action.payload;
+    }
+  },
   extraReducers: (builder) => {
     builder
       .addCase(registerSubscriber.pending, (state) => {
@@ -101,7 +108,7 @@ const userSlice = createSlice({
       })
       .addCase(registerSubscriber.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = action.payload as string || 'An error occurred';
       })
       .addCase(verifySubscriber.pending, (state) => {
         state.loading = true;
@@ -110,10 +117,11 @@ const userSlice = createSlice({
       .addCase(verifySubscriber.fulfilled, (state) => {
         state.loading = false;
         state.isVerified = true;
+        state.error = null;
       })
       .addCase(verifySubscriber.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = action.payload as string || 'An error occurred';
       })
       .addCase(updateUserPreferences.pending, (state) => {
         state.loading = true;
@@ -122,10 +130,11 @@ const userSlice = createSlice({
       .addCase(updateUserPreferences.fulfilled, (state, action: PayloadAction<{ subscriber: UserPreferences }>) => {
         state.loading = false;
         state.preferences = action.payload.subscriber;
+        state.error = null;
       })
       .addCase(updateUserPreferences.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'An error occurred';
+        state.error = action.payload as string || 'An error occurred';
       });
   }
 });

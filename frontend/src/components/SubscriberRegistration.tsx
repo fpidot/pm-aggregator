@@ -1,18 +1,30 @@
 import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { TextField, Button, Typography, Box } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import { TextField, Button, Typography, Box, CircularProgress } from '@mui/material';
 import { registerSubscriber, verifySubscriber } from '../slices/userSlice';
+import { AppDispatch, RootState } from '../store';
 
 const SubscriberRegistration: React.FC = () => {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
+  const { loading, error } = useSelector((state: RootState) => state.user);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [confirmationCode, setConfirmationCode] = useState('');
   const [isCodeSent, setIsCodeSent] = useState(false);
   const [message, setMessage] = useState('');
 
+  const validatePhoneNumber = (number: string) => {
+    const phoneRegex = /^\+?1?\d{10}$/;
+    return phoneRegex.test(number);
+  };
+
   const handleSendCode = async () => {
+    if (!validatePhoneNumber(phoneNumber)) {
+      setMessage('Please enter a valid 10-digit phone number.');
+      return;
+    }
+
     try {
-      await dispatch(registerSubscriber(phoneNumber) as any);
+      await dispatch(registerSubscriber(phoneNumber)).unwrap();
       setIsCodeSent(true);
       setMessage('Confirmation code sent. Please check your phone.');
     } catch (error) {
@@ -22,7 +34,7 @@ const SubscriberRegistration: React.FC = () => {
 
   const handleVerify = async () => {
     try {
-      await dispatch(verifySubscriber({ phoneNumber, confirmationCode }) as any);
+      await dispatch(verifySubscriber({ phoneNumber, confirmationCode })).unwrap();
       setMessage('Phone number verified successfully!');
       // Redirect to AlertCustomization or next step
     } catch (error) {
@@ -39,8 +51,11 @@ const SubscriberRegistration: React.FC = () => {
             label="Phone Number"
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
+            disabled={loading}
           />
-          <Button onClick={handleSendCode}>Send Confirmation Code</Button>
+          <Button onClick={handleSendCode} disabled={loading}>
+            {loading ? <CircularProgress size={24} /> : 'Send Confirmation Code'}
+          </Button>
         </>
       ) : (
         <>
@@ -48,11 +63,16 @@ const SubscriberRegistration: React.FC = () => {
             label="Confirmation Code"
             value={confirmationCode}
             onChange={(e) => setConfirmationCode(e.target.value)}
+            disabled={loading}
           />
-          <Button onClick={handleVerify}>Verify</Button>
+          <Button onClick={handleVerify} disabled={loading}>
+            {loading ? <CircularProgress size={24} /> : 'Verify'}
+          </Button>
         </>
       )}
-      <Typography>{message}</Typography>
+      <Typography color={error ? 'error' : 'inherit'}>
+        {message || (error && typeof error === 'string' ? error : '')}
+      </Typography>
     </Box>
   );
 };
