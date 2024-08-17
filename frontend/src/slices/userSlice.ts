@@ -11,13 +11,14 @@ interface UserState {
 const initialState: UserState = {
   preferences: {
     categories: [],
-    alertTypes: {
+    alertPreferences: {
       dailyUpdates: false,
-      bigMoves: false,
+      bigMoves: false
     },
+    phoneNumber: ''
   },
   loading: false,
-  error: null,
+  error: null
 };
 
 export const updateUserPreferences = createAsyncThunk(
@@ -30,23 +31,13 @@ export const updateUserPreferences = createAsyncThunk(
 
 const userSlice = createSlice({
   name: 'user',
-  initialState: {
-    preferences: {
-      categories: [],
-      alertTypes: {
-        dailyUpdates: false,
-        bigMoves: false
-      },
-      phoneNumber: ''
-    },
-    loading: false,
-    error: null,
-  },
+  initialState,
   reducers: {},
   extraReducers: (builder) => {
     builder
       .addCase(updateUserPreferences.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(updateUserPreferences.fulfilled, (state, action) => {
         state.loading = false;

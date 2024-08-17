@@ -7,19 +7,16 @@ import {
 import { updateUserPreferences } from '../slices/userSlice';
 import { RootState } from '../store';
 import { fetchContracts } from '../slices/contractSlice';
-import { UserPreferences } from '../types'; // Adjust the path as necessary
+import { UserPreferences } from '../types';
 
 function AlertCustomization() {
   const dispatch = useDispatch();
   const { preferences, loading: userLoading } = useSelector((state: RootState) => state.user);
   const { categories, loading: contractsLoading } = useSelector((state: RootState) => state.contracts);
 
-  const [selectedCategories, setSelectedCategories] = useState(preferences.categories);
-  const [alertTypes, setAlertTypes] = useState({
-    dailyUpdates: false,
-    bigMoves: false
-  });
-  const [phoneNumber, setPhoneNumber] = useState(preferences.phoneNumber || '');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(preferences.categories);
+  const [alertPreferences, setAlertPreferences] = useState(preferences.alertPreferences);
+  const [phoneNumber, setPhoneNumber] = useState(preferences.phoneNumber);
 
   useEffect(() => {
     if (categories.length === 0) {
@@ -36,9 +33,9 @@ function AlertCustomization() {
     }
   };
 
-  const handleAlertTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAlertPreferenceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = event.target;
-    setAlertTypes({ ...alertTypes, [name]: checked });
+    setAlertPreferences({ ...alertPreferences, [name]: checked });
   };
 
   const handlePhoneNumberChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,11 +44,12 @@ function AlertCustomization() {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    dispatch(updateUserPreferences({
+    const updatedPreferences: UserPreferences = {
       categories: selectedCategories,
-      alertTypes,
+      alertPreferences,
       phoneNumber
-    } as UserPreferences) as any);
+    };
+    dispatch(updateUserPreferences(updatedPreferences) as any);
   };
 
   if (contractsLoading) return <CircularProgress />;
@@ -76,13 +74,13 @@ function AlertCustomization() {
         ))}
       </FormGroup>
 
-      <Typography variant="h6" sx={{ mt: 2 }}>Alert Types</Typography>
+      <Typography variant="h6" sx={{ mt: 2 }}>Alert Preferences</Typography>
       <FormGroup>
         <FormControlLabel
           control={
             <Checkbox
-              checked={alertTypes.dailyUpdates}
-              onChange={handleAlertTypeChange}
+              checked={alertPreferences.dailyUpdates}
+              onChange={handleAlertPreferenceChange}
               name="dailyUpdates"
             />
           }
@@ -91,8 +89,8 @@ function AlertCustomization() {
         <FormControlLabel
           control={
             <Checkbox
-              checked={alertTypes.bigMoves}
-              onChange={handleAlertTypeChange}
+              checked={alertPreferences.bigMoves}
+              onChange={handleAlertPreferenceChange}
               name="bigMoves"
             />
           }
