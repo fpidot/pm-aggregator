@@ -393,3 +393,31 @@
 {"level":"warn","message":"Failed to get price for contract 66be3514e706e2778710eb60","service":"pm-aggregator","timestamp":"2024-08-17T20:58:00.255Z"}
 {"level":"warn","message":"Failed to get price for contract 66be3520e706e2778710eb62","service":"pm-aggregator","timestamp":"2024-08-17T20:58:00.491Z"}
 {"level":"info","message":"Price update process completed","service":"pm-aggregator","timestamp":"2024-08-17T20:58:00.491Z"}
+{"level":"info","message":"Connected to MongoDB: mongodb://localhost:27017/pm-aggregator","service":"pm-aggregator","timestamp":"2024-08-17T21:07:46.682Z"}
+{"level":"info","message":"Server is running on port 3001","service":"pm-aggregator","timestamp":"2024-08-17T21:07:46.692Z"}
+{"level":"info","message":"Running scheduled price update","service":"pm-aggregator","timestamp":"2024-08-17T21:08:00.817Z"}
+{"level":"info","message":"Starting price update process","service":"pm-aggregator","timestamp":"2024-08-17T21:08:00.818Z"}
+{"level":"warn","message":"Failed to get price for contract 66be3514e706e2778710eb60","service":"pm-aggregator","timestamp":"2024-08-17T21:08:01.026Z"}
+{"level":"warn","message":"Failed to get price for contract 66be3520e706e2778710eb62","service":"pm-aggregator","timestamp":"2024-08-17T21:08:01.243Z"}
+{"level":"info","message":"Price update process completed","service":"pm-aggregator","timestamp":"2024-08-17T21:08:01.244Z"}
+{"level":"info","message":"Connected to MongoDB: mongodb://localhost:27017/pm-aggregator","service":"pm-aggregator","timestamp":"2024-08-17T21:10:40.648Z"}
+{"level":"info","message":"Server is running on port 3001","service":"pm-aggregator","timestamp":"2024-08-17T21:10:40.657Z"}
+{"level":"info","message":"Running scheduled price update","service":"pm-aggregator","timestamp":"2024-08-17T21:11:00.842Z"}
+{"level":"info","message":"Starting price update process","service":"pm-aggregator","timestamp":"2024-08-17T21:11:00.843Z"}
+{"level":"warn","message":"Failed to get price for contract 66be3514e706e2778710eb60","service":"pm-aggregator","timestamp":"2024-08-17T21:11:01.019Z"}
+{"level":"warn","message":"Failed to get price for contract 66be3520e706e2778710eb62","service":"pm-aggregator","timestamp":"2024-08-17T21:11:01.256Z"}
+{"level":"info","message":"Price update process completed","service":"pm-aggregator","timestamp":"2024-08-17T21:11:01.256Z"}
+{"level":"info","message":"Connected to MongoDB: mongodb://localhost:27017/pm-aggregator","service":"pm-aggregator","timestamp":"2024-08-17T21:15:44.988Z"}
+{"level":"info","message":"Server is running on port 3001","service":"pm-aggregator","timestamp":"2024-08-17T21:15:45.000Z"}
+{"level":"info","message":"Running scheduled price update","service":"pm-aggregator","timestamp":"2024-08-17T21:16:00.128Z"}
+{"level":"info","message":"Starting price update process","service":"pm-aggregator","timestamp":"2024-08-17T21:16:00.129Z"}
+{"level":"warn","message":"Failed to get price for contract 66be3514e706e2778710eb60","service":"pm-aggregator","timestamp":"2024-08-17T21:16:00.363Z"}
+{"level":"warn","message":"Failed to get price for contract 66be3520e706e2778710eb62","service":"pm-aggregator","timestamp":"2024-08-17T21:16:00.585Z"}
+{"level":"info","message":"Price update process completed","service":"pm-aggregator","timestamp":"2024-08-17T21:16:00.585Z"}
+{"level":"info","message":"Connected to MongoDB: mongodb://localhost:27017/pm-aggregator","service":"pm-aggregator","timestamp":"2024-08-17T22:03:58.446Z"}
+{"level":"info","message":"Server is running on port 3001","service":"pm-aggregator","timestamp":"2024-08-17T22:03:58.456Z"}
+{"level":"info","message":"Running scheduled price update","service":"pm-aggregator","timestamp":"2024-08-17T22:04:00.479Z"}
+{"level":"info","message":"Starting price update process","service":"pm-aggregator","timestamp":"2024-08-17T22:04:00.480Z"}
+{"level":"warn","message":"Failed to get price for contract 66be3514e706e2778710eb60","service":"pm-aggregator","timestamp":"2024-08-17T22:04:00.747Z"}
+{"level":"warn","message":"Failed to get price for contract 66be3520e706e2778710eb62","service":"pm-aggregator","timestamp":"2024-08-17T22:04:00.971Z"}
+{"level":"info","message":"Price update process completed","service":"pm-aggregator","timestamp":"2024-08-17T22:04:00.971Z"}

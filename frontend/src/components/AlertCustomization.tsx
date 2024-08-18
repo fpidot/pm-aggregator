@@ -15,36 +15,49 @@ function AlertCustomization() {
   const { preferences, loading, isVerified } = useSelector((state: RootState) => state.user);
   const { categories, loading: contractsLoading } = useSelector((state: RootState) => state.contracts);
 
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(preferences.categories);
-  const [alertPreferences, setAlertPreferences] = useState(preferences.alertPreferences);
-  const [phoneNumber, setPhoneNumber] = useState(preferences.phoneNumber);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(preferences?.categories || []);
+  const [alertPreferences, setAlertPreferences] = useState(preferences?.alertPreferences || {
+    dailyUpdates: false,
+    bigMoves: false
+  });
+  const [phoneNumber, setPhoneNumber] = useState(preferences?.phoneNumber || '');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   
   useEffect(() => {
+    console.log('AlertCustomization useEffect - isVerified:', isVerified);
+    console.log('AlertCustomization useEffect - categories:', categories);
     if (categories.length === 0) {
-      dispatch(fetchContracts() as any);
+      dispatch(fetchContracts());
     }
-  }, [dispatch, categories]);
+  }, [dispatch, categories, isVerified]);
+
+  useEffect(() => {
+    console.log('AlertCustomization useEffect - preferences updated:', preferences);
+    if (preferences) {
+      setSelectedCategories(preferences.categories || []);
+      setAlertPreferences(preferences.alertPreferences || { dailyUpdates: false, bigMoves: false });
+      setPhoneNumber(preferences.phoneNumber || '');
+    }
+  }, [preferences]);
 
   console.log('AlertCustomization rendering');
+  console.log('Is Verified:', isVerified);
   console.log('Categories:', categories);
   console.log('Selected Categories:', selectedCategories);
   console.log('Alert Preferences:', alertPreferences);
-  console.log('Is Verified:', isVerified);
+  console.log('Phone Number:', phoneNumber);
 
   const handleCategoryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = event.target;
-    if (checked) {
-      setSelectedCategories([...selectedCategories, name]);
-    } else {
-      setSelectedCategories(selectedCategories.filter(category => category !== name));
-    }
+    setSelectedCategories(prev => 
+      checked ? [...prev, name] : prev.filter(category => category !== name)
+    );
   };
 
   const handleAlertPreferenceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = event.target;
-    setAlertPreferences({ ...alertPreferences, [name]: checked });
+    setAlertPreferences(prev => ({ ...prev, [name]: checked }));
   };
 
   const handlePhoneNumberChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,7 +68,6 @@ function AlertCustomization() {
     event.preventDefault();
     setError(null);
 
-    // Validation logic (keep existing validation)
     if (selectedCategories.length === 0) {
       setError('Please select at least one category');
       return;
@@ -92,9 +104,17 @@ function AlertCustomization() {
       });
   };
 
-  if (contractsLoading) return <CircularProgress />;
-  if (!categories || categories.length === 0) return <Typography>No categories available.</Typography>;
+  if (contractsLoading) {
+    console.log('Contracts loading...');
+    return <CircularProgress />;
+  }
+  
+  if (!categories || categories.length === 0) {
+    console.log('No categories available');
+    return <Typography>No categories available.</Typography>;
+  }
 
+  console.log('Rendering main component content');
   return (
     <Box sx={{ mt: 3 }}>
       {!isVerified ? (
