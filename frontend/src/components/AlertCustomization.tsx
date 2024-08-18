@@ -67,40 +67,38 @@ function AlertCustomization() {
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
-
+  
+    console.log('Submitting preferences:', { selectedCategories, alertPreferences });
+  
     if (selectedCategories.length === 0) {
+      console.log('Error: No categories selected');
       setError('Please select at least one category');
       return;
     }
-
+  
     if (!alertPreferences.dailyUpdates && !alertPreferences.bigMoves) {
+      console.log('Error: No alert types selected');
       setError('Please select at least one alert type');
       return;
     }
-
-    const phoneRegex = /^\d{3}[-]?\d{3}[-]?\d{4}$/;
-    if (!phoneRegex.test(phoneNumber.replace(/\D/g, ''))) {
-      setError('Invalid phone number. Please enter a 10-digit number.');
-      return;
-    }
-
-    const updatedPreferences: UserPreferences = {
+  
+    const updatedPreferences = {
       categories: selectedCategories,
       alertPreferences,
-      phoneNumber: phoneNumber.replace(/\D/g, '')
+      phoneNumber: preferences.phoneNumber
     };
     
-    console.log('Sending preferences:', updatedPreferences);
+    console.log('Dispatching updateUserPreferences with:', updatedPreferences);
     
     dispatch(updateUserPreferences(updatedPreferences))
-      .unwrap()
-      .then((result: { subscriber: UserPreferences }) => {
-        console.log('Server response:', result);
-        setSuccess(true);
-      })
-      .catch((err: Error) => {
-        console.error('Error updating preferences:', err);
-        setError(err.message);
+    .unwrap()
+    .then((result) => {
+      console.log('Update successful, result:', result);
+      setSuccess(true);
+    })
+    .catch((err: Error) => {
+      console.error('Update failed:', err);
+      setError(err.message);
       });
   };
 
@@ -120,69 +118,69 @@ function AlertCustomization() {
       {!isVerified ? (
         <SubscriberRegistration />
       ) : (
-        <Box component="form" onSubmit={handleSubmit}>
-          <Typography variant="h6">Select Categories</Typography>
-          <FormGroup>
-            {categories.map(category => (
+        <>
+          <Typography variant="h6">Customize Your Alerts</Typography>
+          <Typography variant="subtitle1" sx={{ mb: 2 }}>
+            Verified Phone Number: {preferences.phoneNumber || 'Loading...'}
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Select the categories you're interested in and your preferred alert types below.
+          </Typography>
+          <Box component="form" onSubmit={handleSubmit}>
+            <Typography variant="h6" sx={{ mt: 2 }}>Select Categories</Typography>
+            <FormGroup>
+              {categories.map(category => (
+                <FormControlLabel
+                  key={category}
+                  control={
+                    <Checkbox
+                      checked={selectedCategories.includes(category)}
+                      onChange={handleCategoryChange}
+                      name={category}
+                    />
+                  }
+                  label={category}
+                />
+              ))}
+            </FormGroup>
+  
+            <Typography variant="h6" sx={{ mt: 2 }}>Alert Preferences</Typography>
+            <FormGroup>
               <FormControlLabel
-                key={category}
                 control={
                   <Checkbox
-                    checked={selectedCategories.includes(category)}
-                    onChange={handleCategoryChange}
-                    name={category}
+                    checked={alertPreferences.dailyUpdates}
+                    onChange={handleAlertPreferenceChange}
+                    name="dailyUpdates"
                   />
                 }
-                label={category}
+                label="Daily Updates"
               />
-            ))}
-          </FormGroup>
-
-          <Typography variant="h6" sx={{ mt: 2 }}>Alert Preferences</Typography>
-          <FormGroup>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={alertPreferences.dailyUpdates}
-                  onChange={handleAlertPreferenceChange}
-                  name="dailyUpdates"
-                />
-              }
-              label="Daily Updates"
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={alertPreferences.bigMoves}
-                  onChange={handleAlertPreferenceChange}
-                  name="bigMoves"
-                />
-              }
-              label="Big Moves"
-            />
-          </FormGroup>
-
-          <TextField
-            fullWidth
-            label="Phone Number"
-            variant="outlined"
-            value={phoneNumber}
-            onChange={handlePhoneNumberChange}
-            sx={{ mt: 2 }}
-          />
-
-          <Button 
-            type="submit" 
-            variant="contained" 
-            color="primary" 
-            disabled={loading} 
-            sx={{ mt: 2 }}
-          >
-            {loading ? 'Updating...' : 'Save Preferences'}
-          </Button>
-        </Box>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={alertPreferences.bigMoves}
+                    onChange={handleAlertPreferenceChange}
+                    name="bigMoves"
+                  />
+                }
+                label="Big Moves"
+              />
+            </FormGroup>
+  
+            <Button 
+              type="submit" 
+              variant="contained" 
+              color="primary" 
+              disabled={loading} 
+              sx={{ mt: 2 }}
+            >
+              {loading ? 'Updating...' : 'Update Preferences'}
+            </Button>
+          </Box>
+        </>
       )}
-
+  
       <Snackbar
         open={error !== null}
         autoHideDuration={6000}
@@ -193,7 +191,7 @@ function AlertCustomization() {
         open={success}
         autoHideDuration={6000}
         onClose={() => setSuccess(false)}
-        message="Preferences saved successfully"
+        message="Preferences updated successfully"
       />
     </Box>
   );

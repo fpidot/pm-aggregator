@@ -8,19 +8,14 @@ const router = express.Router();
 
 router.post('/preferences', async (req, res) => {
   try {
-    logger.info('Received request to update preferences:', req.body);
+    console.log('Received request to update preferences:', req.body);
     const { phoneNumber, categories, alertPreferences } = req.body;
+    const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
 
     // Validate input
-    if (!phoneNumber || !categories || !alertPreferences) {
-      logger.warn('Missing required fields in request');
+    if (!formattedPhoneNumber || !categories || !alertPreferences) {
+      console.warn('Missing required fields in request');
       return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    // Validate phone number (10 digits, ignoring dashes)
-    const phoneRegex = /^\d{3}[-]?\d{3}[-]?\d{4}$/;
-    if (!phoneRegex.test(phoneNumber.replace(/\D/g, ''))) {
-      return res.status(400).json({ message: 'Invalid phone number. Please enter a 10-digit number.' });
     }
 
     // Validate categories (must be a non-empty array)
@@ -34,32 +29,30 @@ router.post('/preferences', async (req, res) => {
       return res.status(400).json({ message: 'At least one alert type must be selected' });
     }
 
-    // Find existing subscriber or create a new one
-    let subscriber = await Subscriber.findOne({ phoneNumber });
+    let subscriber = await Subscriber.findOne({ phoneNumber: formattedPhoneNumber });
     if (!subscriber) {
-      logger.info('Creating new subscriber with phone number:', phoneNumber);
-      subscriber = new Subscriber({ phoneNumber });
-    } else {
-      logger.info('Updating existing subscriber with phone number:', phoneNumber);
+      return res.status(404).json({ message: 'Subscriber not found' });
     }
-    // Update subscriber preferences
+
     subscriber.categories = categories;
     subscriber.alertPreferences = alertPreferences;
 
-    // Save the updated subscriber
+    console.log('Saving subscriber with preferences:', subscriber);
     await subscriber.save();
-    logger.info('Subscriber preferences saved successfully');
+    console.log('Subscriber preferences saved successfully');
 
-    res.status(200).json({
+    const responseData = {
       message: 'Preferences saved successfully',
-      subscriber: {
+      preferences: {
         phoneNumber: subscriber.phoneNumber,
         categories: subscriber.categories,
         alertPreferences: subscriber.alertPreferences
       }
-    });
+    };
+    console.log('Sending response:', responseData);
+    res.status(200).json(responseData);
   } catch (error) {
-    logger.error('Error saving subscriber preferences:', error);
+    console.error('Error saving subscriber preferences:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -67,23 +60,18 @@ router.post('/preferences', async (req, res) => {
 // Route for registration
 router.post('/register', async (req, res) => {
   try {
-    const { phoneNumber, categories, alertPreferences } = req.body;
+    const { phoneNumber } = req.body;
     const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
 
     let subscriber = await Subscriber.findOne({ phoneNumber: formattedPhoneNumber });
-    console.log('Subscriber saved:', subscriber);
     const confirmationCode = generateConfirmationCode();
 
     if (subscriber) {
-      // If subscriber exists, just update the confirmation code
       subscriber.confirmationCode = confirmationCode;
       subscriber.isVerified = false;
     } else {
-      // If new subscriber, create a new document
       subscriber = new Subscriber({
         phoneNumber: formattedPhoneNumber,
-        categories,
-        alertPreferences,
         confirmationCode,
         isVerified: false
       });
@@ -105,13 +93,13 @@ router.post('/register', async (req, res) => {
 });
 
 // New route for verification
+
 router.post('/verify', async (req, res) => {
   try {
     const { phoneNumber, confirmationCode } = req.body;
     const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
 
     const subscriber = await Subscriber.findOne({ phoneNumber: formattedPhoneNumber });
-
     
     if (!subscriber) {
       return res.status(404).json({ message: 'Subscriber not found' });
@@ -124,14 +112,25 @@ router.post('/verify', async (req, res) => {
 
     subscriber.isVerified = true;
     subscriber.confirmationCode = undefined;
+    
+    // Set default preferences
+    const allCategories = await Subscriber.distinct('categories');
+    subscriber.categories = allCategories;
+    subscriber.alertPreferences = { dailyUpdates: true, bigMoves: true };
+
     await subscriber.save();
-    console.log('Verification attempt:', { 
+    console.log('Verification successful:', { 
       phoneNumber: formattedPhoneNumber, 
-      storedCode: subscriber.confirmationCode, 
-      receivedCode: confirmationCode 
+      categories: subscriber.categories,
+      alertPreferences: subscriber.alertPreferences
     });
 
-    res.status(200).json({ message: 'Phone number verified successfully' });
+    res.status(200).json({ 
+      message: 'Phone number verified successfully',
+      phoneNumber: formattedPhoneNumber,
+      categories: subscriber.categories,
+      alertPreferences: subscriber.alertPreferences
+    });
   } catch (error) {
     console.error('Error verifying subscriber:', error);
     res.status(500).json({ message: 'Error verifying subscriber' });

@@ -12,18 +12,21 @@ const client = twilio(
 
 
 
-export function formatPhoneNumber(phoneNumber: string): string {
+export const formatPhoneNumber = (phoneNumber: string): string => {
   // Remove all non-digit characters
   const digitsOnly = phoneNumber.replace(/\D/g, '');
   
-  // Ensure the number is exactly 10 digits
-  if (digitsOnly.length !== 10) {
-    throw new Error('Invalid phone number format. Must be 10 digits.');
+  if (digitsOnly.length === 10) {
+    return `+1${digitsOnly}`;
+  } else if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
+    return `+${digitsOnly}`;
+  } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
+    return `+${digitsOnly}`;
+  } else {
+    console.error('Invalid phone number format:', phoneNumber);
+    throw new Error(`Invalid phone number format. Received: ${phoneNumber}`);
   }
-  
-  // Add the +1 country code for US numbers
-  return `+1${digitsOnly}`;
-}
+};
 
 export async function sendSMS(to: string, body: string): Promise<void> {
   try {

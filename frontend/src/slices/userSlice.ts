@@ -1,5 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios, { AxiosError } from 'axios';
+import { RootState } from '../store';
+import { formatPhoneNumber } from '../utils/phoneNumberUtil';
 
 export interface UserState {
   isVerified: boolean;
@@ -33,8 +35,9 @@ export const registerSubscriber = createAsyncThunk(
   'user/registerSubscriber',
   async (phoneNumber: string, { rejectWithValue }) => {
     try {
-      const response = await axios.post('/api/subscribers/register', { phoneNumber });
-      return response.data;
+      const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
+      const response = await axios.post('/api/subscribers/register', { phoneNumber: formattedPhoneNumber });
+      return { ...response.data, phoneNumber: formattedPhoneNumber };
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         return rejectWithValue(error.response.data);
@@ -46,11 +49,27 @@ export const registerSubscriber = createAsyncThunk(
 
 export const verifySubscriber = createAsyncThunk(
   'user/verifySubscriber',
-  async ({ phoneNumber, confirmationCode }: { phoneNumber: string; confirmationCode: string }, { rejectWithValue }) => {
+  async ({ phoneNumber, confirmationCode }: { phoneNumber: string; confirmationCode: string }, { rejectWithValue, getState }) => {
     try {
-      const response = await axios.post('/api/subscribers/verify', { phoneNumber, confirmationCode });
-      return response.data;
+      const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
+      console.log('Verifying subscriber:', { phoneNumber: formattedPhoneNumber, confirmationCode });
+      const response = await axios.post('/api/subscribers/verify', { phoneNumber: formattedPhoneNumber, confirmationCode });
+      console.log('Verification response:', response.data);
+      
+      const state = getState() as RootState;
+      const allCategories = state.contracts.categories;
+      console.log('All categories:', allCategories);
+      
+      const result = {
+        ...response.data,
+        phoneNumber: formattedPhoneNumber,
+        categories: allCategories,
+        alertPreferences: { dailyUpdates: true, bigMoves: true }
+      };
+      console.log('Returning result:', result);
+      return result;
     } catch (error) {
+      console.error('Verification error:', error);
       if (error instanceof AxiosError && error.response) {
         return rejectWithValue(error.response.data);
       }
@@ -63,11 +82,18 @@ export const updateUserPreferences = createAsyncThunk(
   'user/updatePreferences',
   async (preferences: UserState['preferences'], { rejectWithValue }) => {
     try {
-      const response = await axios.post('/api/preferences', preferences);
-      return response.data;
+      const formattedPreferences = {
+        ...preferences,
+        phoneNumber: formatPhoneNumber(preferences.phoneNumber)
+      };
+      console.log('Updating preferences:', formattedPreferences);
+      const response = await axios.post('/api/subscribers/preferences', formattedPreferences);
+      console.log('Update response:', response.data);
+      return response.data.preferences;
     } catch (error) {
+      console.error('Update error:', error);
       if (error instanceof AxiosError && error.response) {
-        return rejectWithValue(error.response.data as string);
+        return rejectWithValue(error.response.data);
       }
       return rejectWithValue('An unexpected error occurred');
     }
@@ -100,8 +126,8 @@ const userSlice = createSlice({
         state.isVerified = true;
         state.loading = false;
         state.preferences = {
-          ...state.preferences,
-          categories: action.payload.categories || [],
+          categories: action.payload.categories,
+          alertPreferences: action.payload.alertPreferences,
           phoneNumber: action.payload.phoneNumber
         };
       })
