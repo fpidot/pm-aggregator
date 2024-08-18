@@ -1,7 +1,33 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios, { AxiosError } from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+export interface UserState {
+  isVerified: boolean;
+  loading: boolean;
+  error: string | null;
+  preferences: {
+    categories: string[];
+    alertPreferences: {
+      dailyUpdates: boolean;
+      bigMoves: boolean;
+    };
+    phoneNumber: string;
+  };
+}
+
+const initialState: UserState = {
+  isVerified: false,
+  loading: false,
+  error: null,
+  preferences: {
+    categories: [],
+    alertPreferences: {
+      dailyUpdates: true,
+      bigMoves: true
+    },
+    phoneNumber: ''
+  }
+};
 
 export const registerSubscriber = createAsyncThunk(
   'user/registerSubscriber',
@@ -33,33 +59,11 @@ export const verifySubscriber = createAsyncThunk(
   }
 );
 
-export interface UserPreferences {
-  categories: string[];
-  alertPreferences: {
-    dailyUpdates: boolean;
-    bigMoves: boolean;
-  };
-  phoneNumber: string;
-}
-
-interface UserState {
-  preferences: UserPreferences;
-  isRegistered: boolean;
-  isVerified: boolean;
-  loading: boolean;
-  error: string | null;
-}
-
-
-export const updateUserPreferences = createAsyncThunk<
-  { subscriber: UserPreferences },
-  UserPreferences,
-  { rejectValue: string }
->(
+export const updateUserPreferences = createAsyncThunk(
   'user/updatePreferences',
-  async (preferences, { rejectWithValue }) => {
+  async (preferences: UserState['preferences'], { rejectWithValue }) => {
     try {
-      const response = await axios.post<{ subscriber: UserPreferences }>(`${API_URL}/api/subscribers/preferences`, preferences);
+      const response = await axios.post('/api/preferences', preferences);
       return response.data;
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
@@ -70,73 +74,54 @@ export const updateUserPreferences = createAsyncThunk<
   }
 );
 
-const initialState: UserState = {
-  preferences: {
-    categories: [],
-    alertPreferences: {
-      dailyUpdates: false,
-      bigMoves: false
-    },
-    phoneNumber: ''
-  },
-  isRegistered: false,
-  isVerified: false,
-  loading: false,
-  error: null
-};
-
 const userSlice = createSlice({
   name: 'user',
   initialState,
-  reducers: {
-    clearError: (state) => {
-      state.error = null;
-    },
-    setIsVerified: (state, action: PayloadAction<boolean>) => {
-      state.isVerified = action.payload;
-    }
-  },
+  reducers: {},
   extraReducers: (builder) => {
     builder
       .addCase(registerSubscriber.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(registerSubscriber.fulfilled, (state) => {
+      .addCase(registerSubscriber.fulfilled, (state, action) => {
         state.loading = false;
-        state.isRegistered = true;
+        state.preferences.phoneNumber = action.payload.phoneNumber;
       })
       .addCase(registerSubscriber.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string || 'An error occurred';
+        state.error = action.payload as string;
       })
       .addCase(verifySubscriber.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(verifySubscriber.fulfilled, (state) => {
-        state.loading = false;
+      .addCase(verifySubscriber.fulfilled, (state, action) => {
         state.isVerified = true;
-        state.error = null;
+        state.loading = false;
+        state.preferences = {
+          ...state.preferences,
+          categories: action.payload.categories || [],
+          phoneNumber: action.payload.phoneNumber
+        };
       })
       .addCase(verifySubscriber.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string || 'An error occurred';
+        state.error = action.payload as string;
       })
       .addCase(updateUserPreferences.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(updateUserPreferences.fulfilled, (state, action: PayloadAction<{ subscriber: UserPreferences }>) => {
+      .addCase(updateUserPreferences.fulfilled, (state, action) => {
         state.loading = false;
-        state.preferences = action.payload.subscriber;
-        state.error = null;
+        state.preferences = action.payload;
       })
       .addCase(updateUserPreferences.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string || 'An error occurred';
+        state.error = action.payload as string;
       });
-  }
+  },
 });
 
 export default userSlice.reducer;
