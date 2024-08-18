@@ -24,10 +24,20 @@ router.post('/verify-password', (req, res) => {
 
 router.put('/settings', async (req, res) => {
   try {
-    await adminService.updateAdminSettings(req.body);
-    res.json({ message: 'Admin settings updated successfully' });
+    const updatedSettings = await adminService.updateAdminSettings(req.body);
+    res.json(updatedSettings);
   } catch (error) {
     res.status(400).json({ message: 'Error updating admin settings', error: (error as Error).message });
+  }
+});
+
+router.put('/settings/bigMoveThresholds', async (req, res) => {
+  try {
+    const { category, threshold } = req.body;
+    const updatedSettings = await adminService.updateBigMoveThreshold(category, threshold);
+    res.json(updatedSettings);
+  } catch (error) {
+    res.status(400).json({ message: 'Error updating big move threshold', error: (error as Error).message });
   }
 });
 

@@ -3,6 +3,7 @@ import Subscriber from '../models/Subscriber';
 import logger from '../utils/logger';
 import { sendSMS, formatPhoneNumber } from '../services/smsService';
 import { generateConfirmationCode } from '../utils/codeGenerator';
+import AdminSettings from '../models/AdminSettings';
 
 const router = express.Router();
 
@@ -113,9 +114,14 @@ router.post('/verify', async (req, res) => {
     subscriber.isVerified = true;
     subscriber.confirmationCode = undefined;
     
+    // Fetch categories from AdminSettings
+    const adminSettings = await AdminSettings.findOne();
+    if (!adminSettings) {
+      return res.status(500).json({ message: 'Admin settings not found' });
+    }
+
     // Set default preferences
-    const allCategories = await Subscriber.distinct('categories');
-    subscriber.categories = allCategories;
+    subscriber.categories = adminSettings.categories;
     subscriber.alertPreferences = { dailyUpdates: true, bigMoves: true };
 
     await subscriber.save();

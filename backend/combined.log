@@ -646,3 +646,50 @@
 {"level":"warn","message":"Failed to get price for contract 66be3514e706e2778710eb60","service":"pm-aggregator","timestamp":"2024-08-18T16:44:00.238Z"}
 {"level":"warn","message":"Failed to get price for contract 66be3520e706e2778710eb62","service":"pm-aggregator","timestamp":"2024-08-18T16:44:00.476Z"}
 {"level":"info","message":"Price update process completed","service":"pm-aggregator","timestamp":"2024-08-18T16:44:00.476Z"}
+{"level":"info","message":"Connected to MongoDB: mongodb://localhost:27017/pm-aggregator","service":"pm-aggregator","timestamp":"2024-08-18T16:46:27.425Z"}
+{"level":"info","message":"Server is running on port 3001","service":"pm-aggregator","timestamp":"2024-08-18T16:46:27.434Z"}
+{"level":"info","message":"Running scheduled price update","service":"pm-aggregator","timestamp":"2024-08-18T16:47:00.751Z"}
+{"level":"info","message":"Starting price update process","service":"pm-aggregator","timestamp":"2024-08-18T16:47:00.752Z"}
+{"level":"warn","message":"Failed to get price for contract 66be3514e706e2778710eb60","service":"pm-aggregator","timestamp":"2024-08-18T16:47:00.945Z"}
+{"level":"warn","message":"Failed to get price for contract 66be3520e706e2778710eb62","service":"pm-aggregator","timestamp":"2024-08-18T16:47:01.160Z"}
+{"level":"info","message":"Price update process completed","service":"pm-aggregator","timestamp":"2024-08-18T16:47:01.160Z"}
+{"level":"info","message":"Running scheduled price update","service":"pm-aggregator","timestamp":"2024-08-18T16:48:00.329Z"}
+{"level":"info","message":"Starting price update process","service":"pm-aggregator","timestamp":"2024-08-18T16:48:00.330Z"}
+{"level":"warn","message":"Failed to get price for contract 66be3514e706e2778710eb60","service":"pm-aggregator","timestamp":"2024-08-18T16:48:00.488Z"}
+{"level":"warn","message":"Failed to get price for contract 66be3520e706e2778710eb62","service":"pm-aggregator","timestamp":"2024-08-18T16:48:00.674Z"}
+{"level":"info","message":"Price update process completed","service":"pm-aggregator","timestamp":"2024-08-18T16:48:00.674Z"}
+{"level":"info","message":"Connected to MongoDB: mongodb://localhost:27017/pm-aggregator","service":"pm-aggregator","timestamp":"2024-08-18T17:25:34.821Z"}
+{"level":"info","message":"Server is running on port 3001","service":"pm-aggregator","timestamp":"2024-08-18T17:25:34.830Z"}
+{"level":"info","message":"Running scheduled price update","service":"pm-aggregator","timestamp":"2024-08-18T17:26:00.063Z"}
+{"level":"info","message":"Starting price update process","service":"pm-aggregator","timestamp":"2024-08-18T17:26:00.064Z"}
+{"level":"error","message":"Admin settings not found","service":"pm-aggregator","timestamp":"2024-08-18T17:26:00.068Z"}
+{"level":"info","message":"Running scheduled price update","service":"pm-aggregator","timestamp":"2024-08-18T17:27:00.712Z"}
+{"level":"info","message":"Starting price update process","service":"pm-aggregator","timestamp":"2024-08-18T17:27:00.713Z"}
+{"level":"error","message":"Admin settings not found","service":"pm-aggregator","timestamp":"2024-08-18T17:27:00.715Z"}
+{"level":"info","message":"Running scheduled price update","service":"pm-aggregator","timestamp":"2024-08-18T17:28:00.308Z"}
+{"level":"info","message":"Starting price update process","service":"pm-aggregator","timestamp":"2024-08-18T17:28:00.308Z"}
+{"level":"error","message":"Admin settings not found","service":"pm-aggregator","timestamp":"2024-08-18T17:28:00.311Z"}
+{"level":"info","message":"Running scheduled price update","service":"pm-aggregator","timestamp":"2024-08-18T17:29:00.820Z"}
+{"level":"info","message":"Starting price update process","service":"pm-aggregator","timestamp":"2024-08-18T17:29:00.820Z"}
+{"level":"error","message":"Admin settings not found","service":"pm-aggregator","timestamp":"2024-08-18T17:29:00.823Z"}
+{"level":"info","message":"Connected to MongoDB: mongodb://localhost:27017/pm-aggregator","service":"pm-aggregator","timestamp":"2024-08-18T17:29:23.603Z"}
+{"level":"info","message":"Server is running on port 3001","service":"pm-aggregator","timestamp":"2024-08-18T17:29:23.614Z"}
+{"level":"info","message":"Running scheduled price update","service":"pm-aggregator","timestamp":"2024-08-18T17:30:00.616Z"}
+{"level":"info","message":"Starting price update process","service":"pm-aggregator","timestamp":"2024-08-18T17:30:00.617Z"}
+{"level":"error","message":"Admin settings not found","service":"pm-aggregator","timestamp":"2024-08-18T17:30:00.620Z"}
+{"level":"info","message":"Running scheduled price update","service":"pm-aggregator","timestamp":"2024-08-18T17:31:00.621Z"}
+{"level":"info","message":"Starting price update process","service":"pm-aggregator","timestamp":"2024-08-18T17:31:00.622Z"}
+{"level":"error","message":"Admin settings not found","service":"pm-aggregator","timestamp":"2024-08-18T17:31:00.624Z"}
+{"level":"info","message":"Running scheduled price update","service":"pm-aggregator","timestamp":"2024-08-18T17:32:00.649Z"}
+{"level":"info","message":"Starting price update process","service":"pm-aggregator","timestamp":"2024-08-18T17:32:00.650Z"}
+{"level":"error","message":"Admin settings not found","service":"pm-aggregator","timestamp":"2024-08-18T17:32:00.652Z"}
+{"level":"info","message":"Running scheduled price update","service":"pm-aggregator","timestamp":"2024-08-18T17:33:00.654Z"}
+{"level":"info","message":"Starting price update process","service":"pm-aggregator","timestamp":"2024-08-18T17:33:00.654Z"}
+{"level":"error","message":"Admin settings not found","service":"pm-aggregator","timestamp":"2024-08-18T17:33:00.657Z"}
+{"level":"info","message":"Connected to MongoDB: mongodb://localhost:27017/pm-aggregator","service":"pm-aggregator","timestamp":"2024-08-18T17:33:55.056Z"}
+{"level":"info","message":"Server is running on port 3001","service":"pm-aggregator","timestamp":"2024-08-18T17:33:55.064Z"}
+{"level":"info","message":"Running scheduled price update","service":"pm-aggregator","timestamp":"2024-08-18T17:34:00.124Z"}
+{"level":"info","message":"Starting price update process","service":"pm-aggregator","timestamp":"2024-08-18T17:34:00.125Z"}
+{"level":"warn","message":"Failed to get price for contract 66be3514e706e2778710eb60","service":"pm-aggregator","timestamp":"2024-08-18T17:34:00.417Z"}
+{"level":"warn","message":"Failed to get price for contract 66be3520e706e2778710eb62","service":"pm-aggregator","timestamp":"2024-08-18T17:34:00.749Z"}
+{"level":"info","message":"Price update process completed","service":"pm-aggregator","timestamp":"2024-08-18T17:34:00.750Z"}
