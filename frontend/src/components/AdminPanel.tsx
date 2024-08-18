@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Button, Typography, Box } from '@mui/material';
 import axios from 'axios';
+import CategoryManager from './CategoryManager';
+import BigMoveThresholdManager from './BigMoveThresholdManager';
 
 const AdminPanel: React.FC = () => {
   const [updateStatus, setUpdateStatus] = useState<string>('');
@@ -19,6 +21,8 @@ const AdminPanel: React.FC = () => {
   return (
     <Box>
       <Typography variant="h4">Admin Panel</Typography>
+      <CategoryManager />
+      <BigMoveThresholdManager />
       <Button 
         variant="contained" 
         color="primary" 

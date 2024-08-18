@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export interface IAdminSettings extends Document {
+export interface IAdminSettingsData {
   dailyUpdateTime: string;
   defaultBigMoveThreshold: number;
   bigMoveThresholds: Map<string, number>;
@@ -9,6 +9,9 @@ export interface IAdminSettings extends Document {
   contractDiscoveryInterval: number;
   categories: string[];
 }
+
+// This interface extends Document for Mongoose usage
+export interface IAdminSettings extends IAdminSettingsData, Document {}
 
 const AdminSettingsSchema: Schema = new Schema({
   dailyUpdateTime: { type: String, required: true, default: '09:00' },

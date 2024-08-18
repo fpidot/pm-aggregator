@@ -91,14 +91,14 @@ function AlertCustomization() {
     console.log('Dispatching updateUserPreferences with:', updatedPreferences);
     
     dispatch(updateUserPreferences(updatedPreferences))
-    .unwrap()
-    .then((result) => {
-      console.log('Update successful, result:', result);
-      setSuccess(true);
-    })
-    .catch((err: Error) => {
-      console.error('Update failed:', err);
-      setError(err.message);
+      .unwrap()
+      .then((result) => {
+        console.log('Update successful, result:', result);
+        setSuccess(true);
+      })
+      .catch((err: Error) => {
+        console.error('Update failed:', err);
+        setError(err.message);
       });
   };
 

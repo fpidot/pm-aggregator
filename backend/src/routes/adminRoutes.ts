@@ -31,7 +31,7 @@ router.put('/settings', async (req, res) => {
   }
 });
 
-router.put('/settings/bigMoveThresholds', async (req, res) => {
+router.put('/settings/bigMoveThreshold', async (req, res) => {
   try {
     const { category, threshold } = req.body;
     const updatedSettings = await adminService.updateBigMoveThreshold(category, threshold);

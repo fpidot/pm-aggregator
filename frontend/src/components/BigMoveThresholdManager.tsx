@@ -1,18 +1,20 @@
-// BigMoveThresholdManager.tsx
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { updateBigMoveThreshold, updateDefaultBigMoveThreshold } from '../slices/adminSlice';
+import { RootState, AppDispatch } from '../store';
+import { updateBigMoveThresholdAsync, updateDefaultBigMoveThresholdAsync } from '../slices/adminSlice';
+
+
 
 const BigMoveThresholdManager: React.FC = () => {
-  const dispatch = useDispatch();
-  const { categories, bigMoveThresholds, defaultBigMoveThreshold } = useSelector((state: RootState) => state.admin);
+  const dispatch = useDispatch<AppDispatch>();
+  const { categories, bigMoveThresholds, defaultBigMoveThreshold } = useSelector((state: RootState) => state.admin.settings);
 
   const handleUpdateThreshold = (category: string, threshold: number) => {
-    dispatch(updateBigMoveThreshold({ category, threshold }));
+    dispatch(updateBigMoveThresholdAsync({ category, threshold }));
   };
 
   const handleUpdateDefaultThreshold = (threshold: number) => {
-    dispatch(updateDefaultBigMoveThreshold(threshold));
+    dispatch(updateDefaultBigMoveThresholdAsync(threshold));
   };
 
   return (
@@ -27,7 +29,7 @@ const BigMoveThresholdManager: React.FC = () => {
           step="0.01"
         />
       </div>
-      {categories.map(category => (
+      {categories.map((category: string) => (
         <div key={category}>
           <label>{category}:</label>
           <input
@@ -41,3 +43,5 @@ const BigMoveThresholdManager: React.FC = () => {
     </div>
   );
 };
+
+export default BigMoveThresholdManager;

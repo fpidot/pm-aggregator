@@ -1,11 +1,11 @@
-// CategoryManager.tsx
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
 import { updateCategories, fetchAdminSettings } from '../slices/adminSlice';
 
 const CategoryManager: React.FC = () => {
-  const dispatch = useDispatch();
-  const categories = useSelector((state: RootState) => state.admin.categories);
+  const dispatch = useDispatch<AppDispatch>();
+  const categories = useSelector((state: RootState) => state.admin.settings.categories);
   const [newCategory, setNewCategory] = useState('');
 
   useEffect(() => {
@@ -20,14 +20,14 @@ const CategoryManager: React.FC = () => {
   };
 
   const handleRemoveCategory = (category: string) => {
-    dispatch(updateCategories(categories.filter(c => c !== category)));
+    dispatch(updateCategories(categories.filter((c: string) => c !== category)));
   };
 
   return (
     <div>
       <h2>Manage Categories</h2>
       <ul>
-        {categories.map(category => (
+        {categories.map((category: string) => (
           <li key={category}>
             {category}
             <button onClick={() => handleRemoveCategory(category)}>Remove</button>
@@ -44,3 +44,5 @@ const CategoryManager: React.FC = () => {
     </div>
   );
 };
+
+export default CategoryManager;

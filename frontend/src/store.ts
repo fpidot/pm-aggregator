@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
-import contractReducer from './slices/contractSlice';
+import contractsReducer from './slices/contractSlice';
 import userReducer from './slices/userSlice';
+import adminReducer from './slices/adminSlice';
 
 export const store = configureStore({
   reducer: {
-    contracts: contractReducer,
+    contracts: contractsReducer,
     user: userReducer,
+    admin: adminReducer,
   },
 });
 
