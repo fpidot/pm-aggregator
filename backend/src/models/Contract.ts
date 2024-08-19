@@ -12,6 +12,8 @@ export interface IContract extends Document {
   isFollowed: boolean;
   lastAlertPrice?: number;
   lastAlertTime?: Date;
+  platform?: string;
+  description?: string;
 }
 
 const ContractSchema: Schema = new Schema({
