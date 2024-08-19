@@ -1,134 +1,97 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import axiosRetry from 'axios-retry';
+// src/services/kalshiService.ts
 
-interface KalshiContract {
-  ticker: string;
-  title: string;
-  last_price: number;
-  market_slug: string;
-  category: string;
-}
+import axios, { AxiosError } from 'axios';
+import axiosRetry from 'axios-retry';
+import { IContract } from '../models/Contract';
 
 const KALSHI_API_URL = 'https://trading-api.kalshi.com/trade-api/v2';
 
-let axiosInstance: AxiosInstance;
+const kalshiAxios = axios.create({
+  baseURL: KALSHI_API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-const initializeAxiosInstance = () => {
-  axiosInstance = axios.create({
-    baseURL: KALSHI_API_URL,
-    headers: {
-      'Authorization': `Bearer ${process.env.KALSHI_API_KEY}`,
-      'Content-Type': 'application/json'
+axiosRetry(kalshiAxios, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status === 429;
+  },
+});
+
+kalshiAxios.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    console.error(`Kalshi API Error: ${error.message}`);
+    if (error.response) {
+      console.error(`Status: ${error.response.status}`);
+      console.error(`Data: ${JSON.stringify(error.response.data)}`);
     }
-  });
+    return Promise.reject(error);
+  }
+);
 
-  // Implement retry logic
-  axiosRetry(axiosInstance, {
-    retries: 3,
-    retryDelay: axiosRetry.exponentialDelay,
-    retryCondition: (error: AxiosError) => {
-      return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status === 429;
-    },
-  });
-
-  // Add response interceptor for error handling
-  axiosInstance.interceptors.response.use(
-    (response) => response,
-    (error: AxiosError) => {
-      console.error(`Kalshi API Error: ${error.message}`);
-      if (error.response) {
-        console.error(`Status: ${error.response.status}`);
-        console.error(`Data: ${JSON.stringify(error.response.data)}`);
-      }
-      return Promise.reject(error);
-    }
-  );
-};
-
-let authToken: string | null = null;
-
-async function getAuthToken() {
-  if (authToken) return authToken;
-
+export const loginToKalshi = async (email: string, password: string): Promise<string> => {
   try {
-    const response = await axios.post(`${KALSHI_API_URL}/login`, {
-      email: process.env.KALSHI_EMAIL,
-      password: process.env.KALSHI_PASSWORD,
-    });
-    authToken = response.data.token;
-    return authToken;
+    const response = await kalshiAxios.post('/login', { email, password });
+    return response.data.token;
   } catch (error) {
-    console.error('Error authenticating with Kalshi:', error);
+    console.error('Error logging in to Kalshi:', error);
     throw error;
   }
-}
+};
 
-export async function discoverKalshiContracts(): Promise<KalshiContract[]> {
+export const discoverKalshiContracts = async (token: string): Promise<IContract[]> => {
   try {
-    const token = await getAuthToken();
-    const response = await axios.get(`${KALSHI_API_URL}/markets`, {
+    const response = await kalshiAxios.get('/markets', {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return response.data.markets.flatMap((market: any) => 
-      market.contracts.map((contract: any) => ({
-        ticker: contract.ticker,
-        title: contract.title,
-        last_price: contract.last_price,
-        market_slug: market.ticker,
-        category: market.category,
-      }))
-    );
+    return response.data.markets.map((market: any) => ({
+      platform: 'Kalshi',
+      contractId: market.id,
+      title: market.title,
+      description: market.subtitle,
+      currentPrice: market.yes_bid, // Assuming we're using the 'yes' price
+      isDisplayed: false,
+      isFollowed: false,
+    }));
   } catch (error) {
     console.error('Error fetching Kalshi contracts:', error);
     return [];
   }
-}
+};
 
-export async function updateKalshiPrices(tickers: string[]): Promise<KalshiContract[]> {
+export const updateKalshiPrices = async (token: string, contractIds: string[]): Promise<Partial<IContract>[]> => {
   try {
-    const token = await getAuthToken();
-    const contracts = await Promise.all(
-      tickers.map(ticker => 
-        axios.get(`${KALSHI_API_URL}/contracts/${ticker}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-      )
-    );
-    return contracts.map(response => ({
-      ticker: response.data.ticker,
-      title: response.data.title,
-      last_price: response.data.last_price,
-      market_slug: response.data.market_ticker,
-      category: response.data.category,
-    }));
+    const promises = contractIds.map(async (id) => {
+      const response = await kalshiAxios.get(`/markets/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return {
+        platform: 'Kalshi',
+        market: 'Kalshi',
+        contractId: response.data.ticker,
+        externalId: response.data.ticker,
+        currentPrice: response.data.yes_bid,
+        title: response.data.title || '',
+        lastUpdated: new Date(),
+      };
+    });
+    return await Promise.all(promises);
   } catch (error) {
     console.error('Error updating Kalshi prices:', error);
     return [];
   }
-}
-
-export const getMarketPrice = async (externalId: string): Promise<number | null> => {
-  if (!axiosInstance) initializeAxiosInstance();
-  try {
-    const response = await axiosInstance.get(`/markets/${externalId}`);
-    if (response.data && response.data.yes_bid) {
-      return response.data.yes_bid / 100; // Kalshi prices are in cents
-    }
-    return null;
-  } catch (error) {
-    console.error('Error fetching price from Kalshi:', error);
-    return null;
-  }
 };
 
-export const fetchContractPrice = async (externalId: string): Promise<number | null> => {
-  if (!axiosInstance) initializeAxiosInstance();
+export const getMarketPrice = async (token: string, marketId: string): Promise<number | null> => {
   try {
-    const response = await axiosInstance.get(`/markets/${externalId}`);
-    if (response.data && response.data.yes_bid) {
-      return response.data.yes_bid / 100; // Kalshi prices are in cents
-    }
-    return null;
+    const response = await kalshiAxios.get(`/markets/${marketId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data.yes_bid;
   } catch (error) {
     console.error('Error fetching price from Kalshi:', error);
     return null;

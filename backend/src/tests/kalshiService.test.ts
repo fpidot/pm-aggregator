@@ -1,117 +1,97 @@
+// src/tests/kalshiService.test.ts
+
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
-import { discoverKalshiContracts, updateKalshiPrices, getMarketPrice, fetchContractPrice } from '../services/kalshiService';
+import {
+  loginToKalshi,
+  discoverKalshiContracts,
+  updateKalshiPrices,
+  getMarketPrice,
+} from '../services/kalshiService';
 
 const mock = new MockAdapter(axios);
 
 describe('Kalshi Service', () => {
-  beforeEach(() => {
-    process.env.KALSHI_API_URL = 'https://trading-api.kalshi.com/trade-api/v2';
-    mock.onPost(`${process.env.KALSHI_API_URL}/login`).reply(200, { token: 'mockToken' });
-  });
-
   afterEach(() => {
     mock.reset();
   });
 
-  describe('discoverKalshiContracts', () => {
-    it('should discover Kalshi contracts', async () => {
-      const mockMarkets = {
-        markets: [
-          {
-            ticker: 'MARKET1',
-            contracts: [
-              { ticker: 'ABC', title: 'Contract 1', last_price: 0.5 }
-            ],
-            category: 'cat1'
-          },
-          {
-            ticker: 'MARKET2',
-            contracts: [
-              { ticker: 'DEF', title: 'Contract 2', last_price: 0.7 }
-            ],
-            category: 'cat2'
-          }
-        ]
-      };
-      mock.onGet(`${process.env.KALSHI_API_URL}/markets`).reply(200, mockMarkets);
-
-      const result = await discoverKalshiContracts();
-      expect(result).toEqual([
-        { ticker: 'ABC', title: 'Contract 1', last_price: 0.5, market_slug: 'MARKET1', category: 'cat1' },
-        { ticker: 'DEF', title: 'Contract 2', last_price: 0.7, market_slug: 'MARKET2', category: 'cat2' }
-      ]);
+  it('should login successfully', async () => {
+    mock.onPost('https://trading-api.kalshi.com/trade-api/v2/login').reply(200, {
+      token: 'mock_token',
     });
 
-    it('should handle errors when discovering contracts', async () => {
-      mock.onGet(`${process.env.KALSHI_API_URL}/markets`).reply(500);
+    const token = await loginToKalshi('test@example.com', 'password');
+    expect(token).toBe('mock_token');
+  });
 
-      const result = await discoverKalshiContracts();
-      expect(result).toEqual([]);
+  it('should discover Kalshi contracts', async () => {
+    mock.onGet('https://trading-api.kalshi.com/trade-api/v2/markets').reply(200, {
+      markets: [
+        {
+          id: 'ABC',
+          title: 'Test Market',
+          subtitle: 'Test Description',
+          yes_bid: 0.5,
+        },
+      ],
+    });
+
+    const contracts = await discoverKalshiContracts('mock_token');
+    expect(contracts).toHaveLength(1);
+    expect(contracts[0]).toEqual({
+      platform: 'Kalshi',
+      contractId: 'ABC',
+      title: 'Test Market',
+      description: 'Test Description',
+      currentPrice: 0.5,
+      isDisplayed: false,
+      isFollowed: false,
     });
   });
 
-  describe('updateKalshiPrices', () => {
-    it('should update Kalshi prices', async () => {
-      mock.onGet(`${process.env.KALSHI_API_URL}/contracts/ABC`).reply(200, {
-        ticker: 'ABC',
-        title: 'Contract 1',
-        last_price: 0.5,
-        market_ticker: 'MARKET1',
-        category: 'cat1'
-      });
-      mock.onGet(`${process.env.KALSHI_API_URL}/contracts/DEF`).reply(200, {
-        ticker: 'DEF',
-        title: 'Contract 2',
-        last_price: 0.7,
-        market_ticker: 'MARKET2',
-        category: 'cat2'
-      });
-
-      const result = await updateKalshiPrices(['ABC', 'DEF']);
-      expect(result).toEqual([
-        { ticker: 'ABC', title: 'Contract 1', last_price: 0.5, market_slug: 'MARKET1', category: 'cat1' },
-        { ticker: 'DEF', title: 'Contract 2', last_price: 0.7, market_slug: 'MARKET2', category: 'cat2' }
-      ]);
+  it('should update Kalshi prices', async () => {
+    mock.onGet('https://trading-api.kalshi.com/trade-api/v2/markets/ABC').reply(200, {
+      ticker: 'ABC',
+      yes_bid: 0.6,
     });
 
-    it('should handle errors when updating prices', async () => {
-      mock.onGet(`${process.env.KALSHI_API_URL}/contracts/ABC`).reply(500);
-
-      const result = await updateKalshiPrices(['ABC']);
-      expect(result).toEqual([]);
+    const updatedContracts = await updateKalshiPrices('mock_token', ['ABC']);
+    expect(updatedContracts).toHaveLength(1);
+    expect(updatedContracts[0]).toEqual({
+      platform: 'Kalshi',
+      contractId: 'ABC',
+      currentPrice: 0.6,
     });
   });
 
-  describe('getMarketPrice', () => {
-    it('should get market price', async () => {
-      mock.onGet(`${process.env.KALSHI_API_URL}/markets/ABC`).reply(200, { yes_bid: 5000 });
-
-      const result = await getMarketPrice('ABC');
-      expect(result).toEqual(50); // 5000 cents converted to dollars
+  it('should get market price', async () => {
+    mock.onGet('https://trading-api.kalshi.com/trade-api/v2/markets/ABC').reply(200, {
+      yes_bid: 0.7,
     });
 
-    it('should handle errors when getting market price', async () => {
-      mock.onGet(`${process.env.KALSHI_API_URL}/markets/ABC`).reply(500);
-
-      const result = await getMarketPrice('ABC');
-      expect(result).toBeNull();
-    });
+    const price = await getMarketPrice('mock_token', 'ABC');
+    expect(price).toBe(0.7);
   });
 
-  describe('fetchContractPrice', () => {
-    it('should fetch contract price', async () => {
-      mock.onGet(`${process.env.KALSHI_API_URL}/markets/ABC`).reply(200, { yes_bid: 5000 });
+  it('should handle errors when discovering contracts', async () => {
+    mock.onGet('https://trading-api.kalshi.com/trade-api/v2/markets').reply(500);
 
-      const result = await fetchContractPrice('ABC');
-      expect(result).toEqual(50); // 5000 cents converted to dollars
-    });
+    const contracts = await discoverKalshiContracts('mock_token');
+    expect(contracts).toEqual([]);
+  });
 
-    it('should handle errors when fetching contract price', async () => {
-      mock.onGet(`${process.env.KALSHI_API_URL}/markets/ABC`).reply(500);
+  it('should handle errors when updating prices', async () => {
+    mock.onGet('https://trading-api.kalshi.com/trade-api/v2/markets/ABC').reply(500);
 
-      const result = await fetchContractPrice('ABC');
-      expect(result).toBeNull();
-    });
+    const updatedContracts = await updateKalshiPrices('mock_token', ['ABC']);
+    expect(updatedContracts).toEqual([]);
+  });
+
+  it('should handle errors when getting market price', async () => {
+    mock.onGet('https://trading-api.kalshi.com/trade-api/v2/markets/ABC').reply(500);
+
+    const price = await getMarketPrice('mock_token', 'ABC');
+    expect(price).toBeNull();
   });
 });

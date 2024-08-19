@@ -9,6 +9,7 @@ import * as polymarketService from './polymarketService';
 import * as manifoldService from './manifoldService';
 import * as alertService from './alertService';
 import { checkBigMoves } from './alertService';
+import { getMarketPrice as getKalshiMarketPrice } from './kalshiService';
 
 export async function updatePrices(): Promise<void> {
   logger.info('Starting price update process');
