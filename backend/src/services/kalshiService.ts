@@ -3,6 +3,7 @@
 import axios, { AxiosError } from 'axios';
 import axiosRetry from 'axios-retry';
 import { IContract } from '../models/Contract';
+import { GenericContract } from '../types/genericContract';
 
 const KALSHI_API_URL = 'https://trading-api.kalshi.com/trade-api/v2';
 
@@ -63,20 +64,19 @@ export const discoverKalshiContracts = async (token: string): Promise<IContract[
   }
 };
 
-export const updateKalshiPrices = async (token: string, contractIds: string[]): Promise<Partial<IContract>[]> => {
+export const updateKalshiPrices = async (token: string, contractIds: string[]): Promise<GenericContract[]> => {
   try {
     const promises = contractIds.map(async (id) => {
       const response = await kalshiAxios.get(`/markets/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return {
-        platform: 'Kalshi',
-        market: 'Kalshi',
-        contractId: response.data.ticker,
         externalId: response.data.ticker,
-        currentPrice: response.data.yes_bid,
+        market: 'Kalshi',
         title: response.data.title || '',
+        currentPrice: response.data.yes_bid,
         lastUpdated: new Date(),
+        category: 'Uncategorized', // You may want to adjust this
       };
     });
     return await Promise.all(promises);
@@ -92,6 +92,18 @@ export const getMarketPrice = async (token: string, marketId: string): Promise<n
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.data.yes_bid;
+  } catch (error) {
+    console.error('Error fetching price from Kalshi:', error);
+    return null;
+  }
+};
+
+export const fetchContractPrice = async (token: string, contractId: string): Promise<number | null> => {
+  try {
+    const response = await kalshiAxios.get(`/markets/${contractId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data.yes_bid; // Assuming 'yes_bid' is the price we're interested in
   } catch (error) {
     console.error('Error fetching price from Kalshi:', error);
     return null;

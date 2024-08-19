@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import logger from './utils/logger';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
+import { discoverAllContracts } from './services/marketDiscoveryService';
 import { updatePrices } from './services/priceUpdateService';
 import contractRoutes from './routes/contracts';
 import subscriberRoutes from './routes/subscriberRoutes';
@@ -40,8 +41,13 @@ mongoose.connect(process.env.MONGODB_URI!)
 
     // Set up a cron job to run updatePrices every minute
     cron.schedule('* * * * *', async () => {
-      logger.info('Running scheduled price update');
-      await updatePrices();
+      try {
+        const allContracts = await discoverAllContracts();
+        await updatePrices(allContracts);
+        console.log('Prices updated successfully');
+      } catch (error) {
+        console.error('Error updating prices:', error);
+      }
     });
   })
   .catch((error) => {

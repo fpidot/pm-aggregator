@@ -1,63 +1,10 @@
-import { discoverPredictItContracts, updatePredictItPrices } from './predictItService';
-import { loginToKalshi, discoverKalshiContracts, updateKalshiPrices } from './kalshiService';
-import { discoverPolymarketContracts, updatePolymarketPrices } from './polymarketService';
-import { discoverManifoldContracts, updateManifoldPrices } from './manifoldService';
-import Contract from '../models/Contract';
 import { GenericContract } from '../types/genericContract';
+import { loginToKalshi, updateKalshiPrices, discoverKalshiContracts } from './kalshiService';
+import { updatePredictItPrices, discoverPredictItContracts } from './predictItService';
+import { updatePolymarketPrices, discoverPolymarketContracts } from './polymarketService';
+import { updateManifoldPrices, discoverManifoldContracts } from './manifoldService';
+import Contract from '../models/Contract';
 
-export async function discoverAllContracts() {
-  try {
-    const kalshiToken = await loginToKalshi(process.env.KALSHI_EMAIL!, process.env.KALSHI_PASSWORD!);
-
-    const [predictItContracts, kalshiContracts, polymarketContracts, manifoldContracts] = await Promise.all([
-      discoverPredictItContracts(),
-      discoverKalshiContracts(kalshiToken),
-      discoverPolymarketContracts(),
-      discoverManifoldContracts()
-    ]);
-
-    const allContracts: GenericContract[] = [
-      ...(predictItContracts || []).map(c => ({ ...c, market: 'PredictIt' })),
-      ...(kalshiContracts || []).map(c => ({ ...c, market: 'Kalshi' })),
-      ...(polymarketContracts || []).map(c => ({ ...c, market: 'Polymarket' })),
-      ...(manifoldContracts || []).map(c => ({ ...c, market: 'Manifold' }))
-    ];
-
-    for (const contract of allContracts) {
-      await Contract.findOneAndUpdate(
-        { externalId: getContractId(contract), market: contract.market },
-        {
-          title: getContractTitle(contract),
-          market: contract.market,
-          currentPrice: getContractPrice(contract),
-          category: contract.category || 'Uncategorized',
-          lastUpdated: new Date(),
-          externalId: getContractId(contract)
-        },
-        { upsert: true, new: true }
-      );
-    }
-
-    console.log('Contract discovery completed');
-  } catch (error) {
-    console.error('Error in contract discovery:', error);
-  }
-}
-
-// Existing helper functions
-function getContractId(contract: GenericContract): string {
-  return contract.id || contract.ticker || '';
-}
-
-function getContractTitle(contract: GenericContract): string {
-  return contract.name || contract.question || contract.title || '';
-}
-
-function getContractPrice(contract: GenericContract): number {
-  return contract.lastTradePrice || contract.last_price || contract.probability || (contract.outcomePrices ? contract.outcomePrices[0] : 0);
-}
-
-// New function for updating prices
 export async function updateAllPrices(contracts: GenericContract[]) {
   try {
     const kalshiToken = await loginToKalshi(process.env.KALSHI_EMAIL!, process.env.KALSHI_PASSWORD!);
@@ -74,36 +21,80 @@ export async function updateAllPrices(contracts: GenericContract[]) {
       updateManifoldPrices(manifoldContracts.map(c => c.externalId))
     ]);
 
-    const updatedContracts = [
+    const updatedContracts: GenericContract[] = [
       ...updatedKalshi,
       ...updatedPredictIt,
       ...updatedPolymarket,
       ...updatedManifold
-    ] as GenericContract[];
+    ];
 
     for (const contract of updatedContracts) {
-      if (contract.market && contract.externalId) {
-        await Contract.findOneAndUpdate(
-          { externalId: contract.externalId, market: contract.market },
-          {
-            $set: {
-              currentPrice: contract.currentPrice,
-              lastUpdated: new Date(),
-            },
-            $push: {
-              priceHistory: {
-                price: contract.currentPrice,
-                timestamp: new Date()
-              }
-            }
+      await Contract.findOneAndUpdate(
+        { externalId: contract.externalId, market: contract.market },
+        {
+          $set: {
+            currentPrice: contract.currentPrice,
+            lastUpdated: contract.lastUpdated,
           },
-          { new: true }
-        );
-      }
+          $push: {
+            priceHistory: {
+              price: contract.currentPrice,
+              timestamp: contract.lastUpdated
+            }
+          }
+        },
+        { new: true }
+      );
     }
 
     console.log('Price update completed');
   } catch (error) {
     console.error('Error in price update:', error);
+  }
+}
+
+export async function discoverAllContracts(): Promise<GenericContract[]> {
+  try {
+    const kalshiToken = await loginToKalshi(process.env.KALSHI_EMAIL!, process.env.KALSHI_PASSWORD!);
+
+    const [kalshiContracts, predictItContracts, polymarketContracts, manifoldContracts] = await Promise.all([
+      discoverKalshiContracts(kalshiToken),
+      discoverPredictItContracts(),
+      discoverPolymarketContracts(),
+      discoverManifoldContracts()
+    ]);
+
+    const allContracts: GenericContract[] = [
+      ...kalshiContracts.map(c => ({ ...c, market: 'Kalshi' })),
+      ...predictItContracts.map(c => ({
+        externalId: c.id,
+        market: 'PredictIt',
+        title: c.name,
+        currentPrice: c.lastTradePrice,
+        lastUpdated: new Date(),
+        category: c.markets || 'Uncategorized'
+      })),
+      ...polymarketContracts.map(c => ({
+        externalId: c.id,
+        market: 'Polymarket',
+        title: c.question,
+        currentPrice: c.outcomePrices[0], // Assuming we're using the first outcome price
+        lastUpdated: new Date(),
+        category: 'Uncategorized'
+      })),
+      ...manifoldContracts.map(c => ({
+        externalId: c.id,
+        market: 'Manifold',
+        title: c.question,
+        currentPrice: c.probability,
+        lastUpdated: new Date(),
+        category: 'Uncategorized'
+      }))
+    ];
+
+    return allContracts;
+  } catch (error) {
+    console.error('Error discovering contracts:', error);
+    return [];
   }
 }

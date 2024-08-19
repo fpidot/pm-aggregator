@@ -1,16 +1,9 @@
 export interface GenericContract {
-  
     id?: string;
-    ticker?: string;
-    name?: string;
-    question?: string;
-    title?: string;
-    shortName?: string;
-    status?: string;
-    lastTradePrice?: number;
-    last_price?: number;
-    probability?: number;
-    outcomePrices?: number[];
+    externalId: string;
     market: string;
+    title: string;
+    currentPrice: number;
+    lastUpdated: Date;
     category?: string;
   }

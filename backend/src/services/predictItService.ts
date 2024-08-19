@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import axiosRetry from 'axios-retry';
+import { GenericContract } from '../types/genericContract';
 
 interface PredictItContract {
   id: string;
@@ -38,19 +39,52 @@ axiosInstance.interceptors.response.use(
   }
 );
 
-export const fetchContractPrice = async (externalId: string): Promise<number | null> => {
+export async function updatePredictItPrices(contractIds: string[]): Promise<GenericContract[]> {
   try {
-    const response = await axiosInstance.get(`/markets/${externalId}`);
-    const contract = response.data.contracts.find((c: any) => c.id === externalId);
-    if (contract) {
-      return contract.lastTradePrice;
+    const response = await axiosInstance.get('/all/');
+    const markets = response.data.markets;
+    
+    const updatedContracts: GenericContract[] = [];
+    markets.forEach((market: any) => {
+      market.contracts.forEach((contract: any) => {
+        if (contractIds.includes(contract.id)) {
+          updatedContracts.push({
+            externalId: contract.id,
+            market: 'PredictIt',
+            title: contract.name,
+            currentPrice: contract.lastTradePrice,
+            lastUpdated: new Date(),
+            category: market.name || 'Uncategorized',
+          });
+        }
+      });
+    });
+
+    return updatedContracts;
+  } catch (error) {
+    console.error('Error updating PredictIt prices:', error);
+    return [];
+  }
+}
+
+export async function fetchContractPrice(contractId: string): Promise<number | null> {
+  try {
+    const response = await axiosInstance.get('/all/');
+    const markets = response.data.markets;
+    for (const market of markets) {
+      for (const contract of market.contracts) {
+        if (contract.id === contractId) {
+          return contract.lastTradePrice;
+        }
+      }
     }
+    console.error('Contract not found:', contractId);
     return null;
   } catch (error) {
-    console.error('Error fetching price from PredictIt:', error);
+    console.error('Error fetching PredictIt contract price:', error);
     return null;
   }
-};
+}
 
 export async function discoverPredictItContracts(): Promise<PredictItContract[]> {
   try {
@@ -78,30 +112,3 @@ export async function discoverPredictItContracts(): Promise<PredictItContract[]>
   }
 }
 
-export async function updatePredictItPrices(contractIds: string[]): Promise<PredictItContract[]> {
-  try {
-    const response = await axiosInstance.get('/all/');
-    const markets = response.data.markets;
-    
-    const updatedContracts: PredictItContract[] = [];
-    markets.forEach((market: any) => {
-      market.contracts.forEach((contract: any) => {
-        if (contractIds.includes(contract.id)) {
-          updatedContracts.push({
-            id: contract.id,
-            name: contract.name,
-            shortName: contract.shortName,
-            status: contract.status,
-            lastTradePrice: contract.lastTradePrice,
-            markets: market.name
-          });
-        }
-      });
-    });
-
-    return updatedContracts;
-  } catch (error) {
-    console.error('Error updating PredictIt prices:', error);
-    return [];
-  }
-}

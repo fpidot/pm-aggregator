@@ -2,6 +2,8 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import axiosRetry from 'axios-retry';
 import { ethers } from 'ethers';
 import dotenv from 'dotenv';
+import { GenericContract } from '../types/genericContract';
+
 
 dotenv.config();
 
@@ -88,7 +90,7 @@ export async function discoverPolymarketContracts(): Promise<PolymarketContract[
   }
 }
 
-export async function updatePolymarketPrices(contractIds: string[]): Promise<PolymarketContract[]> {
+export async function updatePolymarketPrices(contractIds: string[]): Promise<GenericContract[]> {
   const token = await getAuthToken();
 
   try {
@@ -97,9 +99,12 @@ export async function updatePolymarketPrices(contractIds: string[]): Promise<Pol
         headers: { Authorization: `Bearer ${token}` }
       });
       return {
-        id: response.data.id,
-        question: response.data.question,
-        outcomePrices: response.data.outcomesPrices
+        externalId: response.data.id,
+        market: 'Polymarket',
+        title: response.data.question,
+        currentPrice: response.data.outcomesPrices[0], // Assuming we're using the first outcome price
+        lastUpdated: new Date(),
+        category: response.data.category || 'Uncategorized',
       };
     }));
 
@@ -110,24 +115,15 @@ export async function updatePolymarketPrices(contractIds: string[]): Promise<Pol
   }
 }
 
-export const fetchContractPrice = async (externalId: string): Promise<number | null> => {
+export async function fetchContractPrice(contractId: string): Promise<number | null> {
+  const token = await getAuthToken();
   try {
-    const response = await axiosInstance.get(`${POLYMARKET_API_URL}/markets/${externalId}`);
-    if (response.data && response.data.outcomesPrices && response.data.outcomesPrices.length > 0) {
-      return parseFloat(response.data.outcomesPrices[0]);
-    }
-    console.warn(`No price data found for contract ${externalId}`);
-    return null;
+    const response = await axiosInstance.get(`${POLYMARKET_API_URL}/markets/${contractId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data.outcomesPrices[0]; // Assuming we're using the first outcome price
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      if (error.response) {
-        console.error(`API error fetching price from Polymarket for ${externalId}:`, error.response.status, error.response.data);
-      } else if (error.request) {
-        console.error(`Network error fetching price from Polymarket for ${externalId}:`, error.message);
-      }
-    } else {
-      console.error(`Unexpected error fetching price from Polymarket for ${externalId}:`, error);
-    }
+    console.error('Error fetching Polymarket contract price:', error);
     return null;
   }
-};
+}
