@@ -1,49 +1,18 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import axiosRetry from 'axios-retry';
+// src/services/manifoldService.ts
+
+import axios from 'axios';
 import { GenericContract } from '../types/genericContract';
-
-
-interface ManifoldContract {
-  id: string;
-  question: string;
-  probability: number;
-}
 
 const MANIFOLD_API_URL = 'https://manifold.markets/api/v0';
 
-const axiosInstance: AxiosInstance = axios.create({
-  baseURL: MANIFOLD_API_URL,
-});
-
-// Implement retry logic
-axiosRetry(axiosInstance, {
-  retries: 3,
-  retryDelay: axiosRetry.exponentialDelay,
-  retryCondition: (error: AxiosError) => {
-    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status === 429;
-  },
-});
-
-// Add response interceptor for error handling
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError) => {
-    console.error(`Manifold API Error: ${error.message}`);
-    if (error.response) {
-      console.error(`Status: ${error.response.status}`);
-      console.error(`Data: ${JSON.stringify(error.response.data)}`);
-    }
-    return Promise.reject(error);
-  }
-);
-
-export async function discoverManifoldContracts(): Promise<ManifoldContract[]> {
+export async function discoverManifoldContracts(): Promise<any[]> {
   try {
-    const response = await axiosInstance.get('/markets');
+    const response = await axios.get(`${MANIFOLD_API_URL}/markets`);
     return response.data.map((market: any) => ({
       id: market.id,
       question: market.question,
       probability: market.probability,
+      volume: market.volume
     }));
   } catch (error) {
     console.error('Error fetching Manifold contracts:', error);
@@ -53,17 +22,17 @@ export async function discoverManifoldContracts(): Promise<ManifoldContract[]> {
 
 export async function updateManifoldPrices(contractIds: string[]): Promise<GenericContract[]> {
   try {
-    const contracts = await Promise.all(
-      contractIds.map(id => axiosInstance.get(`/market/${id}`))
-    );
-    return contracts.map(response => ({
-      externalId: response.data.id,
-      market: 'Manifold',
-      title: response.data.question,
-      currentPrice: response.data.probability,
-      lastUpdated: new Date(),
-      category: response.data.category || 'Uncategorized',
-    }));
+    const markets = await discoverManifoldContracts();
+    return markets
+      .filter((market) => contractIds.includes(market.id))
+      .map((market) => ({
+        externalId: market.id,
+        market: 'Manifold',
+        title: market.question,
+        currentPrice: market.probability,
+        lastUpdated: new Date(),
+        category: 'Uncategorized',
+      }));
   } catch (error) {
     console.error('Error updating Manifold prices:', error);
     return [];
@@ -72,7 +41,7 @@ export async function updateManifoldPrices(contractIds: string[]): Promise<Gener
 
 export async function fetchContractPrice(contractId: string): Promise<number | null> {
   try {
-    const response = await axiosInstance.get(`/market/${contractId}`);
+    const response = await axios.get(`${MANIFOLD_API_URL}/market/${contractId}`);
     return response.data.probability;
   } catch (error) {
     console.error('Error fetching Manifold contract price:', error);

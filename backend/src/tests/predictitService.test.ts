@@ -1,3 +1,5 @@
+// src/tests/predictItService.test.ts
+
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { discoverPredictItContracts, updatePredictItPrices, fetchContractPrice } from '../services/predictItService';
@@ -9,30 +11,32 @@ describe('PredictIt Service', () => {
     mock.reset();
   });
 
+  const mockApiResponse = {
+    markets: [
+      {
+        id: 1,
+        name: 'Test Market',
+        contracts: [
+          { id: 101, name: 'Contract 1', shortName: 'C1', status: 'Open', lastTradePrice: 0.5 },
+          { id: 102, name: 'Contract 2', shortName: 'C2', status: 'Open', lastTradePrice: 0.7 },
+        ],
+      },
+    ],
+  };
+
   describe('discoverPredictItContracts', () => {
     it('should discover PredictIt contracts', async () => {
-      const mockMarkets = {
-        markets: [
-          {
-            name: 'Market 1',
-            contracts: [
-              { id: '1', name: 'Contract 1', shortName: 'C1', status: 'Open', lastTradePrice: 0.5 },
-              { id: '2', name: 'Contract 2', shortName: 'C2', status: 'Open', lastTradePrice: 0.7 },
-            ],
-          },
-        ],
-      };
-      mock.onGet('https://www.predictit.org/api/marketdata/all/').reply(200, mockMarkets);
+      mock.onGet('https://www.predictit.org/api/marketdata/all').reply(200, mockApiResponse);
 
       const result = await discoverPredictItContracts();
       expect(result).toEqual([
-        { id: '1', name: 'Contract 1', shortName: 'C1', status: 'Open', lastTradePrice: 0.5, markets: 'Market 1' },
-        { id: '2', name: 'Contract 2', shortName: 'C2', status: 'Open', lastTradePrice: 0.7, markets: 'Market 1' },
+        { id: 101, name: 'Contract 1', shortName: 'C1', status: 'Open', lastTradePrice: 0.5, markets: 'Test Market' },
+        { id: 102, name: 'Contract 2', shortName: 'C2', status: 'Open', lastTradePrice: 0.7, markets: 'Test Market' },
       ]);
     });
 
     it('should handle errors when discovering contracts', async () => {
-      mock.onGet('https://www.predictit.org/api/marketdata/all/').reply(500);
+      mock.onGet('https://www.predictit.org/api/marketdata/all').reply(500);
 
       const result = await discoverPredictItContracts();
       expect(result).toEqual([]);
@@ -41,64 +45,42 @@ describe('PredictIt Service', () => {
 
   describe('updatePredictItPrices', () => {
     it('should update PredictIt prices', async () => {
-      const mockMarkets = {
-        markets: [
-          {
-            name: 'Market 1',
-            contracts: [
-              { id: '1', name: 'Contract 1', shortName: 'C1', status: 'Open', lastTradePrice: 0.5 },
-              { id: '2', name: 'Contract 2', shortName: 'C2', status: 'Open', lastTradePrice: 0.7 },
-            ],
-          },
-        ],
-      };
-      mock.onGet('https://www.predictit.org/api/marketdata/all/').reply(200, mockMarkets);
+      mock.onGet('https://www.predictit.org/api/marketdata/all').reply(200, mockApiResponse);
 
-      const result = await updatePredictItPrices(['1', '2']);
+      const result = await updatePredictItPrices(['101', '102']);
       expect(result).toEqual([
-        { id: '1', name: 'Contract 1', shortName: 'C1', status: 'Open', lastTradePrice: 0.5, markets: 'Market 1' },
-        { id: '2', name: 'Contract 2', shortName: 'C2', status: 'Open', lastTradePrice: 0.7, markets: 'Market 1' },
+        { externalId: '101', market: 'PredictIt', title: 'Contract 1', currentPrice: 0.5, lastUpdated: expect.any(Date), category: 'Test Market' },
+        { externalId: '102', market: 'PredictIt', title: 'Contract 2', currentPrice: 0.7, lastUpdated: expect.any(Date), category: 'Test Market' },
       ]);
     });
 
     it('should handle errors when updating prices', async () => {
-      mock.onGet('https://www.predictit.org/api/marketdata/all/').reply(500);
+      mock.onGet('https://www.predictit.org/api/marketdata/all').reply(500);
 
-      const result = await updatePredictItPrices(['1', '2']);
+      const result = await updatePredictItPrices(['101', '102']);
       expect(result).toEqual([]);
     });
   });
 
   describe('fetchContractPrice', () => {
     it('should fetch contract price', async () => {
-      const mockMarket = {
-        contracts: [
-          { id: '1', lastTradePrice: 0.5 },
-          { id: '2', lastTradePrice: 0.7 },
-        ],
-      };
-      mock.onGet('https://www.predictit.org/api/marketdata/markets/1').reply(200, mockMarket);
+      mock.onGet('https://www.predictit.org/api/marketdata/all').reply(200, mockApiResponse);
 
-      const result = await fetchContractPrice('1');
+      const result = await fetchContractPrice('101');
       expect(result).toEqual(0.5);
     });
 
     it('should return null if contract is not found', async () => {
-      const mockMarket = {
-        contracts: [
-          { id: '2', lastTradePrice: 0.7 },
-        ],
-      };
-      mock.onGet('https://www.predictit.org/api/marketdata/markets/1').reply(200, mockMarket);
+      mock.onGet('https://www.predictit.org/api/marketdata/all').reply(200, mockApiResponse);
 
-      const result = await fetchContractPrice('1');
+      const result = await fetchContractPrice('999');
       expect(result).toBeNull();
     });
 
     it('should handle errors when fetching contract price', async () => {
-      mock.onGet('https://www.predictit.org/api/marketdata/markets/1').reply(500);
+      mock.onGet('https://www.predictit.org/api/marketdata/all').reply(500);
 
-      const result = await fetchContractPrice('1');
+      const result = await fetchContractPrice('101');
       expect(result).toBeNull();
     });
   });

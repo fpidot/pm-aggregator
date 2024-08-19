@@ -1,9 +1,26 @@
+// src/services/kalshiService.ts
+
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import axiosRetry from 'axios-retry';
 import { IContract } from '../models/Contract';
 import { GenericContract } from '../types/genericContract';
 import dotenv from 'dotenv';
 import path from 'path';
+
+export interface KalshiContract {
+  ticker: string;
+  event_ticker: string;
+  market_type: string;
+  title: string;
+  subtitle: string;
+  yes_bid: number;
+  yes_ask: number;
+  no_bid: number;
+  no_ask: number;
+  last_price: number;
+  status: string;
+  category: string;
+}
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -65,7 +82,7 @@ export const loginToKalshi = async (): Promise<string> => {
   }
 };
 
-export const discoverKalshiContracts = async (token: string): Promise<Partial<IContract>[]> => {
+export async function discoverKalshiContracts(token: string): Promise<KalshiContract[]> {
   try {
     console.log('Fetching Kalshi contracts...');
     const response = await kalshiAxios.get('/markets', {
@@ -75,21 +92,20 @@ export const discoverKalshiContracts = async (token: string): Promise<Partial<IC
     console.log('Kalshi API response:', JSON.stringify(response.data, null, 2));
 
     if (response.data && Array.isArray(response.data.markets)) {
-      return response.data.markets
-        .filter((market: any) => market.ticker !== undefined)
-        .map((market: any): Partial<IContract> => ({
-          platform: 'Kalshi',
-          externalId: market.ticker,
-          title: market.title,
-          description: market.subtitle || '',
-          currentPrice: market.yes_bid,
-          isDisplayed: false,
-          isFollowed: false,
-          market: 'Kalshi',
-          category: market.category || 'Uncategorized',
-          priceHistory: [],
-          lastUpdated: new Date(),
-        }));
+      return response.data.markets.map((market: any): KalshiContract => ({
+        ticker: market.ticker,
+        event_ticker: market.event_ticker,
+        market_type: market.market_type,
+        title: market.title,
+        subtitle: market.subtitle,
+        yes_bid: market.yes_bid,
+        yes_ask: market.yes_ask,
+        no_bid: market.no_bid,
+        no_ask: market.no_ask,
+        last_price: market.last_price,
+        status: market.status,
+        category: market.category || 'Uncategorized',
+      }));
     } else {
       console.error('Unexpected response structure:', JSON.stringify(response.data, null, 2));
       return [];
@@ -102,7 +118,7 @@ export const discoverKalshiContracts = async (token: string): Promise<Partial<IC
     }
     return [];
   }
-};
+}
 
 export const getMarketPrice = async (token: string, marketId: string | undefined): Promise<number | null> => {
   if (!marketId) {
@@ -157,7 +173,7 @@ export const updateKalshiPrices = async (token: string, marketIds: string[]): Pr
         externalId: marketId,
         market: 'Kalshi',
         title: marketData.title || 'Unknown Title',
-        currentPrice: marketData.yes_bid,
+        currentPrice: marketData.yes_bid / 100, // Convert cents to dollars
         lastUpdated: new Date(),
         category: marketData.category || 'Uncategorized'
       });

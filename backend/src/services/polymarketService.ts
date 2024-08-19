@@ -1,114 +1,110 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import axiosRetry from 'axios-retry';
-import { ethers } from 'ethers';
-import dotenv from 'dotenv';
-import { GenericContract } from '../types/genericContract';
+// src/services/polymarketService.ts
 
+import axios from 'axios';
+import { ethers } from 'ethers';
+import { GenericContract } from '../types/genericContract';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
 const POLYMARKET_API_URL = 'https://clob.polymarket.com';
-const POLYMARKET_GRAPH_URL = 'https://subgraph.poly.market/subgraphs/name/polymarket/matic-markets';
+
 const POLYGON_PRIVATE_KEY = process.env.POLYGON_PRIVATE_KEY;
 
-interface PolymarketContract {
-  id: string;
-  question: string;
-  outcomePrices: number[];
+if (!POLYGON_PRIVATE_KEY) {
+  throw new Error('POLYGON_PRIVATE_KEY not found in environment variables');
 }
 
-const axiosInstance: AxiosInstance = axios.create();
+const wallet = new ethers.Wallet(POLYGON_PRIVATE_KEY);
 
-// Implement retry logic
-axiosRetry(axiosInstance, {
-  retries: 3,
-  retryDelay: axiosRetry.exponentialDelay,
-  retryCondition: (error: AxiosError) => {
-    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status === 429;
-  },
-});
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const nonce = 0; // You might want to implement a nonce management system
 
-// Add response interceptor for error handling
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError) => {
-    console.error(`Polymarket API Error: ${error.message}`);
-    if (error.response) {
-      console.error(`Status: ${error.response.status}`);
-      console.error(`Data: ${JSON.stringify(error.response.data)}`);
-    }
-    return Promise.reject(error);
-  }
-);
+  const domain = {
+    name: "ClobAuthDomain",
+    version: "1",
+    chainId: 137, // Polygon chain ID
+  };
 
-let wallet: ethers.Wallet | null = null;
+  const types = {
+    ClobAuth: [
+      { name: "address", type: "address" },
+      { name: "timestamp", type: "string" },
+      { name: "nonce", type: "uint256" },
+      { name: "message", type: "string" },
+    ],
+  };
 
-try {
-  if (!POLYGON_PRIVATE_KEY) {
-    throw new Error('POLYGON_PRIVATE_KEY is not set in the environment variables');
-  }
-  wallet = new ethers.Wallet(POLYGON_PRIVATE_KEY);
-} catch (error) {
-  console.error('Error initializing Polymarket wallet:', error);
+  const value = {
+    address: await wallet.getAddress(),
+    timestamp: timestamp,
+    nonce: nonce,
+    message: "This message attests that I control the given wallet",
+  };
+
+  const signature = await wallet.signTypedData(domain, types, value);
+
+  return {
+    'POLY_ADDRESS': await wallet.getAddress(),
+    'POLY_SIGNATURE': signature,
+    'POLY_TIMESTAMP': timestamp,
+    'POLY_NONCE': nonce.toString(),
+  };
 }
 
-// Initialize provider and signer
-const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
-const signer = new ethers.Wallet(process.env.POLYGON_PRIVATE_KEY as string, provider);
-
-async function getAuthToken() {
-  const message = 'Polymarket Authentication';
-  const signature = await signer.signMessage(message);
-  
+export async function discoverPolymarketContracts(): Promise<any[]> {
   try {
-    const response = await axiosInstance.post(`${POLYMARKET_API_URL}/auth/token`, { signature });
-    return response.data.token;
-  } catch (error) {
-    console.error('Error getting Polymarket auth token:', error);
-    throw error;
-  }
-}
+    const headers = await getAuthHeaders();
+    const response = await axios.get(`${POLYMARKET_API_URL}/markets`, { headers });
+    
+    console.log('Polymarket API response:', JSON.stringify(response.data, null, 2));
 
-export async function discoverPolymarketContracts(): Promise<PolymarketContract[]> {
-  const query = `
-    {
-      markets(first: 1000, orderBy: creationTime, orderDirection: desc) {
-        id
-        question
-        outcomes
-        outcomePrices
-      }
+    if (!response.data || !response.data.data) {
+      console.error('Unexpected Polymarket API response structure');
+      return [];
     }
-  `;
 
-  try {
-    const response = await axiosInstance.post(POLYMARKET_GRAPH_URL, { query });
-    return response.data.data.markets;
+    const markets = response.data.data;
+    if (!Array.isArray(markets)) {
+      console.error('Markets data is not an array:', markets);
+      return [];
+    }
+
+    console.log(`Fetched ${markets.length} markets from Polymarket API`);
+
+    return markets.map((market: any) => ({
+      id: market.condition_id || market.id,
+      question: market.question,
+      outcomePrices: [
+        parseFloat(market.yes_price || '0') / 100,
+        parseFloat(market.no_price || '0') / 100
+      ],
+      volume: parseFloat(market.volume || '0')
+    }));
   } catch (error) {
     console.error('Error fetching Polymarket contracts:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Response data:', error.response?.data);
+      console.error('Response status:', error.response?.status);
+    }
     return [];
   }
 }
 
 export async function updatePolymarketPrices(contractIds: string[]): Promise<GenericContract[]> {
-  const token = await getAuthToken();
-
   try {
-    const prices = await Promise.all(contractIds.map(async (id) => {
-      const response = await axiosInstance.get(`${POLYMARKET_API_URL}/markets/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      return {
-        externalId: response.data.id,
+    const markets = await discoverPolymarketContracts();
+    return markets
+      .filter(market => contractIds.includes(market.id))
+      .map(market => ({
+        externalId: market.id,
         market: 'Polymarket',
-        title: response.data.question,
-        currentPrice: response.data.outcomesPrices[0], // Assuming we're using the first outcome price
+        title: market.question,
+        currentPrice: market.outcomePrices[0],
         lastUpdated: new Date(),
-        category: response.data.category || 'Uncategorized',
-      };
-    }));
-
-    return prices;
+        category: 'Uncategorized',
+      }));
   } catch (error) {
     console.error('Error updating Polymarket prices:', error);
     return [];
@@ -116,12 +112,10 @@ export async function updatePolymarketPrices(contractIds: string[]): Promise<Gen
 }
 
 export async function fetchContractPrice(contractId: string): Promise<number | null> {
-  const token = await getAuthToken();
   try {
-    const response = await axiosInstance.get(`${POLYMARKET_API_URL}/markets/${contractId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return response.data.outcomesPrices[0]; // Assuming we're using the first outcome price
+    const markets = await discoverPolymarketContracts();
+    const market = markets.find(m => m.id === contractId);
+    return market ? market.outcomePrices[0] : null;
   } catch (error) {
     console.error('Error fetching Polymarket contract price:', error);
     return null;
