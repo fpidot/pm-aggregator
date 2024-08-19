@@ -1,5 +1,5 @@
-import axios from 'axios';
-
+import axios, { AxiosInstance, AxiosError } from 'axios';
+import axiosRetry from 'axios-retry';
 
 interface PredictItContract {
   id: string;
@@ -12,23 +12,49 @@ interface PredictItContract {
 
 const PREDICTIT_API = 'https://www.predictit.org/api/marketdata/markets';
 
-export const fetchContractPrice = async (externalId: string): Promise<number | null> => {
-    try {
-      const response = await axios.get(`${PREDICTIT_API}/${externalId}`);
-      const contract = response.data.contracts.find((c: any) => c.id === externalId);
-      if (contract) {
-        return contract.lastTradePrice;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error fetching price from PredictIt:', error);
-      return null;
+const axiosInstance: AxiosInstance = axios.create({
+  baseURL: 'https://www.predictit.org/api/marketdata',
+});
+
+// Implement retry logic
+axiosRetry(axiosInstance, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error: AxiosError) => {
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status === 429;
+  },
+});
+
+// Add response interceptor for error handling
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    console.error(`PredictIt API Error: ${error.message}`);
+    if (error.response) {
+      console.error(`Status: ${error.response.status}`);
+      console.error(`Data: ${JSON.stringify(error.response.data)}`);
     }
-  };
+    return Promise.reject(error);
+  }
+);
+
+export const fetchContractPrice = async (externalId: string): Promise<number | null> => {
+  try {
+    const response = await axiosInstance.get(`/markets/${externalId}`);
+    const contract = response.data.contracts.find((c: any) => c.id === externalId);
+    if (contract) {
+      return contract.lastTradePrice;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching price from PredictIt:', error);
+    return null;
+  }
+};
 
 export async function discoverPredictItContracts(): Promise<PredictItContract[]> {
   try {
-    const response = await axios.get('https://www.predictit.org/api/marketdata/all/');
+    const response = await axiosInstance.get('/all/');
     const markets = response.data.markets;
     
     const contracts: PredictItContract[] = [];
@@ -54,7 +80,7 @@ export async function discoverPredictItContracts(): Promise<PredictItContract[]>
 
 export async function updatePredictItPrices(contractIds: string[]): Promise<PredictItContract[]> {
   try {
-    const response = await axios.get('https://www.predictit.org/api/marketdata/all/');
+    const response = await axiosInstance.get('/all/');
     const markets = response.data.markets;
     
     const updatedContracts: PredictItContract[] = [];

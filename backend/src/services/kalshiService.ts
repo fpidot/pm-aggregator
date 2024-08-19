@@ -1,4 +1,5 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosError } from 'axios';
+import axiosRetry from 'axios-retry';
 
 interface KalshiContract {
   ticker: string;
@@ -20,6 +21,28 @@ const initializeAxiosInstance = () => {
       'Content-Type': 'application/json'
     }
   });
+
+  // Implement retry logic
+  axiosRetry(axiosInstance, {
+    retries: 3,
+    retryDelay: axiosRetry.exponentialDelay,
+    retryCondition: (error: AxiosError) => {
+      return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status === 429;
+    },
+  });
+
+  // Add response interceptor for error handling
+  axiosInstance.interceptors.response.use(
+    (response) => response,
+    (error: AxiosError) => {
+      console.error(`Kalshi API Error: ${error.message}`);
+      if (error.response) {
+        console.error(`Status: ${error.response.status}`);
+        console.error(`Data: ${JSON.stringify(error.response.data)}`);
+      }
+      return Promise.reject(error);
+    }
+  );
 };
 
 let authToken: string | null = null;
@@ -85,29 +108,29 @@ export async function updateKalshiPrices(tickers: string[]): Promise<KalshiContr
 }
 
 export const getMarketPrice = async (externalId: string): Promise<number | null> => {
-    if (!axiosInstance) initializeAxiosInstance();
-    try {
-      const response = await axiosInstance.get(`/markets/${externalId}`);
-      if (response.data && response.data.yes_bid) {
-        return response.data.yes_bid / 100; // Kalshi prices are in cents
-      }
-      return null;
-    } catch (error) {
-      console.error('Error fetching price from Kalshi:', error);
-      return null;
+  if (!axiosInstance) initializeAxiosInstance();
+  try {
+    const response = await axiosInstance.get(`/markets/${externalId}`);
+    if (response.data && response.data.yes_bid) {
+      return response.data.yes_bid / 100; // Kalshi prices are in cents
     }
-  };
+    return null;
+  } catch (error) {
+    console.error('Error fetching price from Kalshi:', error);
+    return null;
+  }
+};
 
-  export const fetchContractPrice = async (externalId: string): Promise<number | null> => {
-    if (!axiosInstance) initializeAxiosInstance();
-    try {
-      const response = await axiosInstance.get(`/markets/${externalId}`);
-      if (response.data && response.data.yes_bid) {
-        return response.data.yes_bid / 100; // Kalshi prices are in cents
-      }
-      return null;
-    } catch (error) {
-      console.error('Error fetching price from Kalshi:', error);
-      return null;
+export const fetchContractPrice = async (externalId: string): Promise<number | null> => {
+  if (!axiosInstance) initializeAxiosInstance();
+  try {
+    const response = await axiosInstance.get(`/markets/${externalId}`);
+    if (response.data && response.data.yes_bid) {
+      return response.data.yes_bid / 100; // Kalshi prices are in cents
     }
-  };
+    return null;
+  } catch (error) {
+    console.error('Error fetching price from Kalshi:', error);
+    return null;
+  }
+};
