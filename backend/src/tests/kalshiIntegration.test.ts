@@ -1,12 +1,12 @@
 import {
     loginToKalshi,
-    connectWebSocket,
     discoverKalshiContracts,
-    getMarketPrice,
-    subscribeToMarketUpdates,
+    getMarketData,
+    updateKalshiPrices,
+    fetchContractPrice,
   } from '../services/kalshiService';
   
-  jest.setTimeout(30000); // Increase timeout to 30 seconds
+  jest.setTimeout(30000);
   
   describe('Kalshi Integration Tests', () => {
     let authToken: string;
@@ -15,30 +15,37 @@ import {
       try {
         authToken = await loginToKalshi();
         expect(authToken).toBeTruthy();
-        await connectWebSocket(authToken);
       } catch (error) {
         console.error('Setup failed:', error);
         throw error;
       }
     });
   
-    it('should discover contracts and get market prices', async () => {
+    it('should discover contracts and get market data', async () => {
       try {
         const contracts = await discoverKalshiContracts(authToken);
         console.log(`Discovered ${contracts.length} contracts`);
         expect(contracts.length).toBeGreaterThan(0);
   
+        // Only log details for the first 5 contracts
+        console.log('First 5 contracts:', JSON.stringify(contracts.slice(0, 5), null, 2));
+  
         if (contracts.length > 0) {
           const firstContract = contracts[0];
-          console.log('First contract:', JSON.stringify(firstContract, null, 2));
           if (firstContract && firstContract.externalId) {
-            const price = await getMarketPrice(authToken, firstContract.externalId);
+            console.log(`Attempting to get market data for ${firstContract.externalId}`);
             
-            if (price === null) {
-              console.error('Failed to retrieve price for contract:', JSON.stringify(firstContract, null, 2));
+            const marketData = await getMarketData(authToken, firstContract.externalId);
+            console.log(`Market data: ${JSON.stringify(marketData, null, 2)}`);
+            
+            expect(marketData).not.toBeNull();
+            expect(marketData.yes_bid).toBeDefined();
+            expect(marketData.title).toBeDefined();
+            
+            // Log a warning if yes_bid is 0
+            if (marketData.yes_bid === 0) {
+              console.warn(`Warning: yes_bid is 0 for market ${firstContract.externalId}`);
             }
-            
-            expect(price).not.toBeNull();
           } else {
             fail('First contract does not have a valid externalId');
           }
@@ -51,27 +58,27 @@ import {
       }
     });
   
-    it('should connect to WebSocket and receive updates', async () => {
+    it('should update prices for multiple markets', async () => {
       try {
         const contracts = await discoverKalshiContracts(authToken);
-        const externalIds = contracts
-          .map(c => c.externalId)
-          .filter((id): id is string => id !== undefined)
-          .slice(0, 5);
+        const marketIds = contracts.slice(0, 5).map(c => c.externalId!).filter(id => id !== undefined);
   
-        if (externalIds.length > 0) {
-          await subscribeToMarketUpdates(externalIds);
+        const updatedPrices = await updateKalshiPrices(authToken, marketIds);
+        console.log('Updated prices:', JSON.stringify(updatedPrices, null, 2));
+  
+        expect(updatedPrices.length).toBe(marketIds.length);
+        updatedPrices.forEach(price => {
+          expect(price.currentPrice).not.toBeNull();
+          expect(price.title).toBeDefined();
+          expect(price.category).toBeDefined();
           
-          // Wait for a short period to potentially receive updates
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          
-          // Note: In a real scenario, you'd want to verify that updates are being received
-          console.log('Subscribed to market updates for:', externalIds);
-        } else {
-          fail('No valid external IDs found');
-        }
+          // Log a warning if currentPrice is 0
+          if (price.currentPrice === 0) {
+            console.warn(`Warning: currentPrice is 0 for market ${price.externalId}`);
+          }
+        });
       } catch (error) {
-        console.error('WebSocket test failed:', error);
+        console.error('Test failed:', error);
         throw error;
       }
     });

@@ -1,6 +1,5 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import axiosRetry from 'axios-retry';
-import WebSocket from 'ws';
 import { IContract } from '../models/Contract';
 import { GenericContract } from '../types/genericContract';
 import dotenv from 'dotenv';
@@ -9,7 +8,6 @@ import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const KALSHI_REST_API_URL = 'https://trading-api.kalshi.com/trade-api/v2';
-const KALSHI_WS_API_URL = 'wss://trading-api.kalshi.com/trade-api/ws/v2';
 
 export const kalshiAxios: AxiosInstance = axios.create({
   baseURL: KALSHI_REST_API_URL,
@@ -38,8 +36,6 @@ kalshiAxios.interceptors.response.use(
   }
 );
 
-let wsConnection: WebSocket | null = null;
-
 export const loginToKalshi = async (): Promise<string> => {
   try {
     const email = process.env.KALSHI_EMAIL;
@@ -67,35 +63,6 @@ export const loginToKalshi = async (): Promise<string> => {
     }
     throw error;
   }
-};
-
-export const connectWebSocket = (token: string): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    if (wsConnection) {
-      wsConnection.close();
-    }
-
-    console.log('Attempting to connect to WebSocket');
-    wsConnection = new WebSocket(KALSHI_WS_API_URL, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-
-    wsConnection.on('open', () => {
-      console.log('WebSocket connection established');
-      resolve();
-    });
-
-    wsConnection.on('error', (error) => {
-      console.error('WebSocket error:', error);
-      reject(error);
-    });
-
-    wsConnection.on('close', (code, reason) => {
-      console.log(`WebSocket connection closed. Code: ${code}, Reason: ${reason}`);
-    });
-  });
 };
 
 export const discoverKalshiContracts = async (token: string): Promise<Partial<IContract>[]> => {
@@ -137,34 +104,6 @@ export const discoverKalshiContracts = async (token: string): Promise<Partial<IC
   }
 };
 
-export const subscribeToMarketUpdates = (marketIds: string[]): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) {
-      reject(new Error('WebSocket is not open'));
-      return;
-    }
-
-    wsConnection.send(JSON.stringify({
-      action: 'subscribe',
-      target_types: ['market_updates'],
-      targets: marketIds,
-    }));
-
-    resolve();
-  });
-};
-
-export const updateKalshiPrices = (marketUpdates: any[]): GenericContract[] => {
-  return marketUpdates.map(update => ({
-    externalId: update.ticker,
-    market: 'Kalshi',
-    title: update.title || '',
-    currentPrice: update.yes_bid,
-    lastUpdated: new Date(),
-    category: 'Uncategorized',
-  }));
-};
-
 export const getMarketPrice = async (token: string, marketId: string | undefined): Promise<number | null> => {
   if (!marketId) {
     console.error('Market ID is undefined');
@@ -172,10 +111,10 @@ export const getMarketPrice = async (token: string, marketId: string | undefined
   }
 
   try {
-    // Change from /market/ to /markets/
     const response = await kalshiAxios.get(`/markets/${marketId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+    console.log('Kalshi API response:', JSON.stringify(response.data, null, 2));
     if (response.data && typeof response.data.yes_bid === 'number') {
       return response.data.yes_bid;
     } else {
@@ -190,6 +129,43 @@ export const getMarketPrice = async (token: string, marketId: string | undefined
     }
     return null;
   }
+};
+
+export const getMarketData = async (token: string, marketId: string): Promise<any | null> => {
+  try {
+    const response = await kalshiAxios.get(`/markets/${marketId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    console.log('Kalshi API response:', JSON.stringify(response.data, null, 2));
+    return response.data;
+  } catch (error: any) {
+    console.error(`Error fetching data for market ${marketId} from Kalshi:`, error.message);
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+    }
+    return null;
+  }
+};
+
+export const updateKalshiPrices = async (token: string, marketIds: string[]): Promise<GenericContract[]> => {
+  const updatedPrices: GenericContract[] = [];
+  for (const marketId of marketIds) {
+    const marketData = await getMarketData(token, marketId);
+    if (marketData && typeof marketData.yes_bid === 'number') {
+      updatedPrices.push({
+        externalId: marketId,
+        market: 'Kalshi',
+        title: marketData.title || 'Unknown Title',
+        currentPrice: marketData.yes_bid,
+        lastUpdated: new Date(),
+        category: marketData.category || 'Uncategorized'
+      });
+    } else {
+      console.warn(`Warning: Unable to get valid data for market ${marketId}`);
+    }
+  }
+  return updatedPrices;
 };
 
 export const fetchContractPrice = async (token: string, contractId: string): Promise<number | null> => {
